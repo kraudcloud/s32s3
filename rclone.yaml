@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rclone
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-config
+  namespace: rclone
+type: Opaque
+stringData:
+  rclone.conf: |
+    [source]
+    type = s3
+    provider = Minio
+    access_key_id = rclone-user
+    secret_access_key = 1oI6wpWgMFWdRaYbuZf6CsyrtM2HOnL7CeQAJCh4
+    endpoint = http://bitnami-minio.minio:9000
+    acl = private
+    bucket_acl = private
+
+    [dest]
+    type = crypt
+    remote = backup:
+    password = EjCf9fA-O0ZruaA-bebUDeSlE88jKL3xTZulwAKU-nWtCfQi0q4I25GeYttKAFybk9e9oqF1JkouZQ9zaJoHusPKIg4qGLx7uQyj3L18xNW_MpPCgqOtgAPkKs23OwcIKISdcTbM
+
+    [backup]
+    type = s3
+    provider = Minio
+    access_key_id = rclone-user
+    secret_access_key = NL671NA8VyWT4eBdqKGUQlH1xTLmRloNGZ2HlIGB
+    endpoint = http://bitnami-minio.backup:9000
+    acl = private
+    bucket_acl = private
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rclone
+  namespace: rclone
+  labels:
+    app: rclone
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - image: rclone/rclone
+            name: rclone
+            command:
+            - rclone
+            - --config
+            - /etc/rclone.conf
+            - sync
+            - --fast-list
+            - --progress
+            - --checksum
+            - --update
+            - --use-server-modtime
+            - "source:"
+            - "dest:"
+            resources:
+              limits:
+                cpu: "200m"
+                memory: "500M"
+            volumeMounts:
+            - mountPath: /etc/rclone.conf
+              name: config
+              subPath: rclone.conf
+          volumes:
+          - name: config
+            secret:
+              secretName: rclone-config

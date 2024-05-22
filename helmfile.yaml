@@ -1,0 +1,15 @@
+repositories:
+- name: bitnami
+  url: https://charts.bitnami.com/bitnami
+
+releases:
+# admin creds:
+# kubectl get secrets bitnami-minio -otemplate='{{range $key, $value := .data}}{{$key}}: {{ $value | base64decode }}{{"\n"}}{{end}}' -n backup
+- name: bitnami
+  chart: bitnami/minio
+  namespace: minio
+  wait: true
+- name: bitnami
+  chart: bitnami/minio
+  namespace: backup
+  wait: true
