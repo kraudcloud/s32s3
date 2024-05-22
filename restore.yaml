@@ -1,18 +1,18 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: rclone-restore
-  namespace: rclone
+  name: s32s3-restore
+  namespace: s32s3
 spec:
   template:
     metadata:
-      name: rclone-restore
+      name: s32s3-restore
     spec:
       restartPolicy: Never
       containers:
-      - image: rclone
+      - image: ctr.0x.pt/ops/s32s3:latest
         imagePullPolicy: IfNotPresent
-        name: rclone
+        name: s32s3
         args:
         - restore
         env:
@@ -29,4 +29,4 @@ spec:
       volumes:
       - name: config
         secret:
-          secretName: rclone-config
+          secretName: s32s3-config
