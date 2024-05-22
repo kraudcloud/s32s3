@@ -44,14 +44,9 @@ metadata:
     app: rclone
 spec:
   schedule: "* * * * *"
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
-      podFailurePolicy:
-        rules:
-        - action: FailJob
-          onPodConditions:
-          - status: "True"
-            type: Failed
       template:
         metadata:
           labels:
