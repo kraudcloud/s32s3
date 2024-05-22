@@ -11,6 +11,7 @@
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
           kubectl
+          k9s
           rclone
           kind
           yq

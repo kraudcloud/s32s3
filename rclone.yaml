@@ -23,6 +23,7 @@ stringData:
     [dest]
     type = crypt
     remote = backup:
+    directory_name_encryption = false
     password = EjCf9fA-O0ZruaA-bebUDeSlE88jKL3xTZulwAKU-nWtCfQi0q4I25GeYttKAFybk9e9oqF1JkouZQ9zaJoHusPKIg4qGLx7uQyj3L18xNW_MpPCgqOtgAPkKs23OwcIKISdcTbM
 
     [backup]
@@ -43,27 +44,27 @@ metadata:
     app: rclone
 spec:
   schedule: "* * * * *"
-  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
+      podFailurePolicy:
+        rules:
+        - action: FailJob
+          onPodConditions:
+          - status: "True"
+            type: Failed
       template:
+        metadata:
+          labels:
+            app: rclone
         spec:
           restartPolicy: Never
           containers:
-          - image: rclone/rclone
+          - image: rclone
+            imagePullPolicy: IfNotPresent
             name: rclone
-            command:
-            - rclone
-            - --config
-            - /etc/rclone.conf
-            - sync
-            - --fast-list
-            - --progress
-            - --checksum
-            - --update
-            - --use-server-modtime
-            - "source:"
-            - "dest:"
+            env:
+            - name: RCLONE_BUCKET_PREFIX
+              value: backup-
             resources:
               limits:
                 cpu: "200m"

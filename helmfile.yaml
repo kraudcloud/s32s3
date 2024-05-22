@@ -4,7 +4,7 @@ repositories:
 
 releases:
 # admin creds:
-# kubectl get secrets bitnami-minio -otemplate='{{range $key, $value := .data}}{{$key}}: {{ $value | base64decode }}{{"\n"}}{{end}}' -n backup
+# {{/* kubectl get secrets bitnami-minio -otemplate='{{range $key, $value := .data}}{{$key}}: {{ $value | base64decode }}{{"\n"}}{{end}}' -n backup */}}
 - name: bitnami
   chart: bitnami/minio
   namespace: minio
