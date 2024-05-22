@@ -62,6 +62,8 @@ spec:
           - image: rclone
             imagePullPolicy: IfNotPresent
             name: rclone
+            args:
+            - backup
             env:
             - name: RCLONE_BUCKET_PREFIX
               value: backup-

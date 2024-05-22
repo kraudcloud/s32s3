@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rclone-restore
+  namespace: rclone
+spec:
+  template:
+    metadata:
+      name: rclone-restore
+    spec:
+      restartPolicy: Never
+      containers:
+      - image: rclone
+        imagePullPolicy: IfNotPresent
+        name: rclone
+        args:
+        - restore
+        env:
+        - name: RCLONE_BUCKET_PREFIX
+          value: backup-
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "500M"
+        volumeMounts:
+        - mountPath: /etc/rclone.conf
+          name: config
+          subPath: rclone.conf
+      volumes:
+      - name: config
+        secret:
+          secretName: rclone-config
