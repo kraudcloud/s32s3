@@ -1,0 +1,32 @@
+name: Release Charts
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Sed Versions
+        run: |
+          sed -i -e 's/appVersion: .*/appVersion: "${{ github.ref_name }}"/' chart/Chart.yaml
+          sed -i -e 's/version: .*/version: "${{ github.ref_name }}"/' chart/Chart.yaml
+
+      - name: Run chart-releaser
+        uses: Karitham/helm-oci-chart-releaser@f2f293f8f796568f47dfaea603ae61e2b3b3fa41
+        with:
+          name: s32s3-chart
+          tag: ${{ github.ref_name }}
+          path: ./chart
+          registry: ctr.0x.pt
+          repository: ops
+          # This github action sucks.
+          registry_username: robot$ops+s32s3
+          registry_password: ${{ secrets.HELM_TOKEN }}

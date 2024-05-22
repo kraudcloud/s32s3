@@ -1,0 +1,6 @@
+{{- if .Values.restore.enabled }}
+Running a restore job.{{if .Values.restore.at }} Restoring data from {{.Values.restore.at | quote}}.{{end}}
+{{- end }}
+
+Backups are now running on schedule ({{.Values.config.schedule | quote}}).
+Make sure they are running by querying the pods or the job history once in a while.

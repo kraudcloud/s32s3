@@ -1,0 +1,46 @@
+{{- if .Values.restore.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{.Release.Name }}-restore
+  namespace: {{.Release.Namespace }}
+  labels: {{ include "s32s3.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 12 }}
+      securityContext: {{ toYaml .Values.podSecurityContext | nindent 12 }}
+      nodeSelector: {{ toYaml .Values.nodeSelector | nindent 12 }}
+      tolerations: {{ toYaml .Values.tolerations | nindent 12 }}
+      affinity: {{ toYaml .Values.affinity | nindent 12 }}
+      restartPolicy: Never
+      containers:
+        - name: {{.Release.Name }}-restore
+          image: "{{ include "s32s3.image" . }}"
+          resources: {{ toYaml .Values.resources | nindent 16 }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - restore
+            {{- if .Values.restore.at }}
+            - --at
+            - {{ .Values.restore.at | quote }}
+            {{- end }}
+          env:
+            {{- range $key, $value := .Values.config.crypt -}}
+            {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 10 }}
+            {{- end }}
+            {{- range $key, $value := .Values.config.destination -}}
+            {{- include "s32s3.env" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 10 }}
+            {{- end }}
+            {{- range $key, $value := .Values.config.source -}}
+            {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 10 }}
+            {{- end }}
+          - name: BACKUP_BUCKET
+            value: {{ .Values.config.backupBucket | quote }}
+            {{- range $key, $value := .Values.config.extraEnv}}
+          - name: EXPIRATION_DAYS
+            value: {{ .Values.config.expirationDays | quote }}
+          - name: {{ $key | quote }}
+            value: {{ $value | quote }}
+            {{- end }}
+{{- end }}
