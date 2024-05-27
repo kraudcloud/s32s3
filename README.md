@@ -2,21 +2,11 @@
 
 This repository is me messing around with using rclone for encrypted s3 to s3 backup. The destination should never be able to read the objects nor own the decryption key.
 
-```sh
-export KUBECONFIG=$(pwd)/kubeconfig.yaml
-kind create cluster --config kind.yaml
-```
+## Chart
 
-```sh
-helmfile apply
-```
+There's example usage for the chart in [the helmfile](./helmfile.yaml).
 
-Now add objects/buckets to `bitnami-minio.minio:9001` (port forward to the UI or something)
+## TODO
 
-Create a user on both minios and set the creds in [rclone.yaml](./rclone.yaml) the secret.
-
-```sh
-kubectl apply -f rclone.yaml
-```
-
-The backup is now running in the background
+- Don't use seperate jobs to build the secret, just build it on the fly before running restore/backup.
+- Build a secret for each sub-section (crypt, source, destionation) to pull the values from. This allows the user to edit fields of those directly instead of editing the helm chart. Allows for quick password rotation.

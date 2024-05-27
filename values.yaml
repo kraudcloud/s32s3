@@ -1,0 +1,66 @@
+image:
+  repository: ctr.0x.pt/ops/s32s3
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+schedule: ""
+
+source:
+  accessKeyId: ""
+  secretAccessKey: {}
+  # is an env secret/secret ref object
+  #   value: "ABVC"
+  # or
+  #   secretName: "my-secret"
+  #   secretKey: "password"
+  endpoint: ""
+  provider: "Minio"
+  acl: "private"
+  bucketAcl: "private"
+
+destination:
+  accessKeyId: ""
+  secretAccessKey: {}
+  # is an env secret/secret ref object
+  #   value: "ABVC"
+  # or
+  #   secretName: "my-secret"
+  #   secretKey: "password"
+  endpoint: ""
+  provider: "Minio"
+  acl: "private"
+  bucketAcl: "private"
+  bucketPrefix: "bucket-"
+
+crypt:
+  password: {}
+  # is an env secret/secret ref object
+  #   value: "ABVC"
+  # or
+  #   secretName: "my-secret"
+  #   secretKey: "password"
+  password2: {}
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+
+resources: {}
+# We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user. This also increases chances charts run on environments with little
+# resources, such as Minikube. If you do want to specify resources, uncomment the following
+# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+# limits:
+#   cpu: 100m
+#   memory: 128Mi
+# requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

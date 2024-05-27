@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{.Release.Name }}-backup
+  namespace: {{.Release.Namespace }}
+  labels: {{ include "s32s3.labels" . | nindent 4 }}
+spec:
+  schedule: {{ default "* * * * *" .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 12 }}
+          serviceAccountName: {{.Release.Name }}
+          securityContext: {{ toYaml .Values.podSecurityContext | nindent 12 }}
+          nodeSelector: {{ toYaml .Values.nodeSelector | nindent 12 }}
+          tolerations: {{ toYaml .Values.tolerations | nindent 12 }}
+          affinity: {{ toYaml .Values.affinity | nindent 12 }}
+          restartPolicy: Never
+          containers:
+            - name: {{.Release.Name }}-backup
+              image: "{{ .Values.image.repository }}{{if .Values.image.tag}}:{{.Values.image.tag }}{{end}}"
+              resources: {{ toYaml .Values.resources | nindent 16 }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args:
+                - backup
+              env:
+                - name: RCLONE_BUCKET_PREFIX
+                  value: {{ .Values.destination.bucketPrefix }}
+                - name: RCLONE_CONFIG_PATH
+                  value: /config/rclone/rclone.conf
+              volumeMounts:
+              - name: config
+                mountPath: /config/rclone/rclone.conf
+                subPath: rclone.conf
+          volumes:
+            - name: config
+              secret:
+                secretName: {{.Release.Name }}-config

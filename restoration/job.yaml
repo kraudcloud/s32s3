@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: s32s3-restore
+  namespace: s32s3
+spec:
+  template:
+    metadata:
+      name: s32s3-restore
+    spec:
+      restartPolicy: Never
+      containers:
+        - image: ctr.0x.pt/ops/s32s3:latest
+          imagePullPolicy: IfNotPresent
+          name: s32s3
+          args:
+            - restore
+          env:
+            - name: RCLONE_BUCKET_PREFIX
+              value: backup-
+            - name: RCLONE_CONFIG_PATH
+              value: /config/rclone/rclone.con
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "500M"
+          volumeMounts:
+            - name: config
+              mountPath: /config/rclone/rclone.conf
+              subPath: rclone.conf
+      volumes:
+        - name: config
+          secret:
+            secretName: s32s3-config

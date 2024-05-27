@@ -1,0 +1,27 @@
+name: Release Charts
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Run chart-releaser
+        uses: appany/helm-oci-chart-releaser@v0.4.2
+        with:
+          name: s32s3-chart
+          tag: "0.1.0"
+          path: ./
+          registry: ctr.0x.pt
+          repository: ops
+          # This github action sucks.
+          registry_username: "'robot$ops+s32s3'"
+          registry_password: ${{ secrets.HELM_TOKEN }}

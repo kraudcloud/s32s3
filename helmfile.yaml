@@ -1,15 +1,27 @@
 repositories:
-- name: bitnami
-  url: https://charts.bitnami.com/bitnami
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
 
 releases:
-# admin creds:
-# {{/* kubectl get secrets bitnami-minio -otemplate='{{range $key, $value := .data}}{{$key}}: {{ $value | base64decode }}{{"\n"}}{{end}}' -n backup */}}
-- name: bitnami
-  chart: bitnami/minio
-  namespace: minio
-  wait: true
-- name: bitnami
-  chart: bitnami/minio
-  namespace: backup
-  wait: true
+  # admin creds:
+  # {{/* kubectl get secrets bitnami-minio -otemplate='{{range $key, $value := .data}}{{$key}}: {{ $value | base64decode }}{{"\n"}}{{end}}' -n backup */}}
+  - name: bitnami
+    chart: bitnami/minio
+    namespace: minio
+  - name: bitnami
+    chart: bitnami/minio
+    namespace: backup
+  - name: s32s3
+    chart: ./
+    namespace: default
+    values:
+      - source:
+          accessKeyId: "rclone-user"
+          secretAccessKey:
+            value: "vqBqSfipBkYsj5g0klte0fjJVtZ7DaarCpcdFXvk"
+          endpoint: "http://bitnami-minio.minio:9000"
+        destination:
+          accessKeyId: "rclone-user"
+          secretAccessKey:
+            value: "NL671NA8VyWT4eBdqKGUQlH1xTLmRloNGZ2HlIGB"
+          endpoint: "http://bitnami-minio.backup:9000"
