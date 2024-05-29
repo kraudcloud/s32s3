@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 config_file=${RCLONE_CONFIG_PATH-/config/rclone/rclone.conf}
 source_name=${RCLONE_SOURCE_NAME-source:}
 dest_name=${RCLONE_DESTINATION_NAME-dest:}

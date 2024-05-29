@@ -9,6 +9,13 @@ spec:
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
+      podFailurePolicy:
+        rules:
+          - action: FailJob
+            onExitCodes:
+              containerName: {{.Release.Name }}-backup
+              values: [0]
+              operator: NotIn
       template:
         spec:
           imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 12 }}

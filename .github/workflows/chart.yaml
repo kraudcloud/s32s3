@@ -18,7 +18,7 @@ jobs:
         uses: Karitham/helm-oci-chart-releaser@f2f293f8f796568f47dfaea603ae61e2b3b3fa41
         with:
           name: s32s3-chart
-          tag: "0.1.1"
+          tag: "0.1.2" # todo pull from chart.yaml
           path: ./
           registry: ctr.0x.pt
           repository: ops
