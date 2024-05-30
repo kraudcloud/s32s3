@@ -15,13 +15,25 @@ releases:
     chart: ./
     namespace: default
     values:
-      - source:
-          accessKeyId: "rclone-user"
-          secretAccessKey:
-            value: "vqBqSfipBkYsj5g0klte0fjJVtZ7DaarCpcdFXvk"
-          endpoint: "http://bitnami-minio.minio:9000"
-        destination:
-          accessKeyId: "rclone-user"
-          secretAccessKey:
-            value: "NL671NA8VyWT4eBdqKGUQlH1xTLmRloNGZ2HlIGB"
-          endpoint: "http://bitnami-minio.backup:9000"
+      - config:
+          source:
+            access_key_id:
+              value: "rclone-user"
+            secret_access_key:
+              value: "vqBqSfipBkYsj5g0klte0fjJVtZ7DaarCpcdFXvk"
+            endpoint:
+              value: "http://bitnami-minio.minio:9000"
+          destination:
+            access_key_id:
+              value: "rclone-user"
+            secret_access_key:
+              value: "NL671NA8VyWT4eBdqKGUQlH1xTLmRloNGZ2HlIGB"
+            endpoint:
+              value: "http://bitnami-minio.backup:9000"
+            region:
+              value: "us-east-1"
+          crypt:
+            password:
+              value: "password"
+            password2:
+              value: "salt"

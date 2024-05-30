@@ -9,45 +9,35 @@ fullnameOverride: ""
 
 schedule: ""
 
-source:
-  accessKeyId: ""
-  secretAccessKey: {}
-  # is an env secret/secret ref object
+config:
+  # destination and source are fields to `env[]`
+  # eg
   #   value: "ABVC"
   # or
-  #   secretName: "my-secret"
-  #   secretKey: "password"
-  endpoint: ""
-  provider: "Minio"
-  acl: "private"
-  bucketAcl: "private"
-
-destination:
-  accessKeyId: ""
-  secretAccessKey: {}
-  # is an env secret/secret ref object
-  #   value: "ABVC"
-  # or
-  #   secretName: "my-secret"
-  #   secretKey: "password"
-  endpoint: ""
-  provider: "Minio"
-  acl: "private"
-  bucketAcl: "private"
-  bucketPrefix: "bucket-"
-
-crypt:
-  password: {}
-  # is an env secret/secret ref object
-  #   value: "ABVC"
-  # or
-  #   secretName: "my-secret"
-  #   secretKey: "password"
-  password2: {}
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: ""
+  #       key: ""
+  destination:
+    access_key_id: {}
+    secret_access_key: {}
+    endpoint: {}
+    provider:
+      value: "Minio"
+  source:
+    access_key_id: {}
+    secret_access_key: {}
+    endpoint: {}
+    provider:
+      value: "Minio"
+  crypt:
+    password: {}
+    password2: {}
 
 job:
-  # key: value
   env: {}
+  # key: value
+  bucketPrefix: "bucket-"
 
 podAnnotations: {}
 podLabels: {}

@@ -34,7 +34,7 @@ spec:
                 - backup
               env:
                 - name: RCLONE_BUCKET_PREFIX
-                  value: {{ .Values.destination.bucketPrefix }}
+                  value: {{ .Values.job.bucketPrefix | quote }}
                 - name: RCLONE_CONFIG_PATH
                   value: /config/rclone/rclone.conf
                 {{range $key, $value :=.Values.job.env }}
