@@ -45,6 +45,10 @@ crypt:
   #   secretKey: "password"
   password2: {}
 
+job:
+  # key: value
+  env: {}
+
 podAnnotations: {}
 podLabels: {}
 podSecurityContext: {}

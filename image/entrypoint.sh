@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+if [[ -n ${DEBUG-} ]]; then
+  set -x
+fi
+
 config_file=${RCLONE_CONFIG_PATH-/config/rclone/rclone.conf}
 source_name=${RCLONE_SOURCE_NAME-source:}
 dest_name=${RCLONE_DESTINATION_NAME-dest:}
@@ -25,9 +29,9 @@ backup() {
   validate_bucket_name "$bucket_prefix"
 
   local buckets=$(rclone --config "$config_file" lsjson "$source_name")
-  echo "found $(jq length -n $buckets) buckets"
+  echo "found $(echo $buckets | jq length) buckets"
 
-  jq -r '.[].Name' -n $buckets | while read bucket; do
+  echo $buckets | jq -r '.[].Name' | while read bucket; do
     echo "syncing bucket $source_name$bucket to $dest_name$bucket_prefix$bucket"
     rclone --config "$config_file" sync $rclone_args "$source_name$bucket" "$dest_name$bucket_prefix$bucket"
   done
