@@ -37,7 +37,7 @@ config:
 job:
   env: {}
   # key: value
-  bucketPrefix: "bucket-"
+  bucketPrefix: "backup-"
 
 podAnnotations: {}
 podLabels: {}
