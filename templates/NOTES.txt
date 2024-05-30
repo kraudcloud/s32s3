@@ -1,12 +1,6 @@
-{{ $existing := lookup "v1" "Secret" .Release.Namespace (printf "%s-config" .Release.Name) }}
-{{- if not $existing }}
 We generated the configuration for you, please make a backup of it. If you lose it you will be unable to recover your backups.
 
-$ kubectl get secret {{.Release.Name }}-config -o yaml
-
-{{- else }}
-We found an existing configuration for backup, do not forget to make a backup.
-{{- end}}
+$ kubectl get secret {{.Release.Name }}-config -o yaml | base64 -d
 
 Backups are now running on schedule ({{.Values.schedule | quote}}). Make sure they are running by querying the pods or the job history once in a while.
 

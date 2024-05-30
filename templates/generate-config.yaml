@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   # The reason we use a job to generate the config is that rclone stores its passwords in a weird way in the config file.
   # It's impossible to replicate with helm, so we have to use a job to generate the config file.
-  name: {{.Release.Name }}-init-config
+  name: "{{.Release.Name }}-config-{{ now | unixEpoch }}"
   namespace: {{.Release.Namespace }}
   labels: {{ include "s32s3.labels" . | nindent 4 }}
 spec:
@@ -15,32 +15,41 @@ spec:
   affinity: {{ toYaml .Values.affinity | nindent 4 }}
   restartPolicy: Never
   containers:
-    - name: {{.Release.Name }}-init-config
+    - name: {{.Release.Name }}-config
       image: "{{ .Values.image.repository }}{{if .Values.image.tag}}:{{.Values.image.tag }}{{end}}"
       resources: {{ toYaml .Values.resources | nindent 8 }}
       imagePullPolicy: {{ .Values.image.pullPolicy }}
       command: ["/bin/sh", "-c"]
+      {{ $sec := lookup "v1" "Secret" .Release.Namespace "s32s3-config" }}
       args:
         - |
           rclone config touch
+
+          echo "creating source"
 
           rclone config create --non-interactive source s3 \
             {{- range $key, $value := .Values.config.source }}
             "{{ $key }}=$SOURCE_{{ $key | upper }}" \
             {{- end }}
+
+          echo "creating destination"
             
           rclone config create --non-interactive backup s3 \
             {{- range $key, $value := .Values.config.destination }}
             "{{ $key }}=$DEST_{{ $key | upper }}" \
             {{- end }}
 
+          echo "creating crypt"
+
           rclone config create --non-interactive dest crypt \
             remote="backup:" \
             directory_name_encryption=false \
             password=$(rclone obscure $CRYPT_PASSWORD) \
-            password2=$(rclone obscure $CRYPT_PASSWORD2) \
+            password2=$(rclone obscure $CRYPT_PASSWORD2)
 
-          curl -s -X POST -d "{
+          echo "writing config"
+
+          curl -s -X PUT -d "{
             \"apiVersion\": \"v1\",
             \"kind\": \"Secret\",
             \"metadata\": {
@@ -52,27 +61,27 @@ spec:
           }" \
           -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
           -H "Content-Type: application/json" \
-          -o /dev/null \
-          -k https://kubernetes.default/api/v1/namespaces/{{ .Release.Namespace }}/secrets
+          -k https://kubernetes.default/api/v1/namespaces/{{ .Release.Namespace }}/secrets/{{.Release.Name }}-config \
+          -o /dev/null
       env:
         # passwords are special cased because they need to be obscured by rclone
         - name: CRYPT_PASSWORD
-          {{if .Values.config.crypt.password }}
+          {{- if .Values.config.crypt.password }}
           {{- .Values.config.crypt.password | toYaml | nindent 10}}
           {{- else }}
           {{ fail (printf "config.crypt.password is required") }}
           {{- end }}
         - name: CRYPT_PASSWORD2
-          {{if .Values.config.crypt.password2 }}
+          {{- if .Values.config.crypt.password2 }}
           {{- .Values.config.crypt.password2 | toYaml | nindent 10}}
           {{- else }}
           {{ fail (printf "config.crypt.password2 is required") }}
           {{- end }}
-          {{range $key, $value :=.Values.config.destination }}
+          {{- range $key, $value :=.Values.config.destination }}
         - name: DEST_{{ $key | upper }}
           {{- $value | toYaml | nindent 10}}
           {{- end }}
-          {{range $key, $value :=.Values.config.source }}
+          {{- range $key, $value :=.Values.config.source }}
         - name: SOURCE_{{ $key | upper }}
           {{- $value | toYaml | nindent 10}}
           {{- end }}
