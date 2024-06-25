@@ -5,7 +5,7 @@ metadata:
   namespace: {{.Release.Namespace }}
   labels: {{ include "s32s3.labels" . | nindent 4 }}
 spec:
-  schedule: {{ default "* * * * *" .Values.schedule | quote }}
+  schedule: {{ .Values.config.schedule | quote }}
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
@@ -33,19 +33,25 @@ spec:
               args:
                 - backup
               env:
-                - name: RCLONE_BUCKET_PREFIX
-                  value: {{ .Values.job.bucketPrefix | quote }}
-                - name: RCLONE_CONFIG_PATH
-                  value: /config/rclone/rclone.conf
-                {{range $key, $value :=.Values.job.env }}
-                - name: {{ $key | quote }}
-                  value: {{ $value | quote }}
-                {{- end }}
-              volumeMounts:
-              - name: config
-                mountPath: /config/rclone/rclone.conf
-                subPath: rclone.conf
-          volumes:
-            - name: config
-              secret:
-                secretName: {{.Release.Name }}-config
+                - name: BUCKET_PREFIX
+                  value: {{ .Values.config.bucketPrefix | quote }}
+                - name: CRYPT_PASSWORD
+                  {{- if .Values.config.crypt.password }}
+                  {{- .Values.config.crypt.password | toYaml | nindent 18}}
+                  {{- else }}
+                  {{ fail (printf "config.crypt.password is required") }}
+                  {{- end }}
+                - name: CRYPT_PASSWORD2
+                  {{- if .Values.config.crypt.password2 }}
+                  {{- .Values.config.crypt.password2 | toYaml | nindent 18}}
+                  {{- else }}
+                  {{ fail (printf "config.crypt.password2 is required") }}
+                  {{- end }}
+                  {{- range $key, $value :=.Values.config.destination }}
+                - name: DEST_{{ $key | upper }}
+                  {{- $value | toYaml | nindent 18}}
+                  {{- end }}
+                  {{- range $key, $value :=.Values.config.source }}
+                - name: SOURCE_{{ $key | upper }}
+                  {{- $value | toYaml | nindent 18}}
+                  {{- end }}

@@ -7,9 +7,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-schedule: ""
-
 config:
+  schedule: "* * * * *"
+  bucketPrefix: "backup-"
   # destination and source are fields to `env[]`
   # eg
   #   value: "ABVC"
@@ -22,22 +22,21 @@ config:
     access_key_id: {}
     secret_access_key: {}
     endpoint: {}
+    region:
+      value: "us-east-1"
     provider:
       value: "Minio"
   source:
     access_key_id: {}
     secret_access_key: {}
     endpoint: {}
+    region:
+      value: "us-east-1"
     provider:
       value: "Minio"
   crypt:
     password: {}
     password2: {}
-
-job:
-  env: {}
-  # key: value
-  bucketPrefix: "backup-"
 
 podAnnotations: {}
 podLabels: {}

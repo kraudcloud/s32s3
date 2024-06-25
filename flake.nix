@@ -17,6 +17,7 @@
           yq
           kubernetes-helm
           helmfile
+          go
         ];
       };
     }
