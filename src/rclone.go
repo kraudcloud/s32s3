@@ -2,78 +2,26 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/exec"
-
-	"github.com/rclone/rclone/fs/config/obscure"
+	"time"
 )
 
-func writeConfig(w io.Writer, c BackupConfig) error {
-	pass1, err := obscure.Obscure(c.Crypt.Password)
-	if err != nil {
-		return fmt.Errorf("obscure password: %w", err)
+func EncodeConfig(w io.Writer, c BackupConfig) error {
+	if err := c.Source.EncodeIni(w); err != nil {
+		return fmt.Errorf("source: encode ini: %w", err)
 	}
 
-	pass2, err := obscure.Obscure(c.Crypt.Password2)
-	if err != nil {
-		return fmt.Errorf("obscure password2: %w", err)
+	if err := c.Dest.EncodeIni(w); err != nil {
+		return fmt.Errorf("dest: encode ini: %w", err)
 	}
 
-	err = EncodeIni(w, map[string]map[string]any{
-		c.Source.Name: {
-			"type":              "s3",
-			"env_auth":          "false",
-			"provider":          c.Source.Provider,
-			"region":            c.Source.Region,
-			"endpoint":          c.Source.Endpoint,
-			"access_key_id":     c.Source.AccessKeyID,
-			"secret_access_key": c.Source.SecretAccessKey,
-		},
-		c.Dest.Name: {
-			"type":              "s3",
-			"env_auth":          "false",
-			"provider":          c.Dest.Provider,
-			"region":            c.Dest.Region,
-			"endpoint":          c.Dest.Endpoint,
-			"access_key_id":     c.Dest.AccessKeyID,
-			"secret_access_key": c.Dest.SecretAccessKey,
-		},
-		c.Crypt.Name: {
-			"type":      "crypt",
-			"password":  pass1,
-			"password2": pass2,
-			// https://rclone.org/crypt/#configuration
-			"remote": fmt.Sprintf("%s:", c.Dest.Name),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("encode ini: %w", err)
-	}
-
-	return nil
-}
-
-func EncodeIni(w io.Writer, c map[string]map[string]any) error {
-	for section, values := range c {
-		_, err := fmt.Fprintf(w, "[%s]\n", section)
-		if err != nil {
-			return err
-		}
-
-		for key, value := range values {
-			_, err := fmt.Fprintf(w, "%s = %v\n", key, value)
-			if err != nil {
-				return err
-			}
-		}
-
-		_, err = fmt.Fprintln(w)
-		if err != nil {
-			return err
-		}
+	if err := c.Crypt.EncodeIni(w); err != nil {
+		return fmt.Errorf("crypt: encode ini: %w", err)
 	}
 
 	return nil
@@ -87,18 +35,16 @@ func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig
 	defer os.Remove(f.Name())
 	defer f.Close()
 
-	err = writeConfig(io.MultiWriter(f, os.Stderr), config)
+	err = EncodeConfig(f, config)
 	if err != nil {
 		return fmt.Errorf("build rclone config: %w", err)
 	}
-
-	f.Sync()
 
 	args := []string{
 		"sync",
 		"--config", f.Name(),
 		fmt.Sprintf("%s:%s", config.Source.Name, bucket),
-		fmt.Sprintf("%s:%s%s", config.Crypt.Name, config.Prefix, bucket),
+		fmt.Sprintf("%s:%s", config.Crypt.Name, bucket),
 	}
 
 	log.Info("running rclone", "args", args)
@@ -113,4 +59,69 @@ func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig
 
 	log.Info("rclone sync complete")
 	return nil
+}
+
+func RcloneListBucketsRemote(ctx context.Context, log *slog.Logger, config BackupConfig, remote string) ([]string, error) {
+	f, err := os.CreateTemp("", "rclone.conf")
+	if err != nil {
+		return nil, fmt.Errorf("create temp file: %w", err)
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	err = EncodeConfig(f, config)
+	if err != nil {
+		return nil, fmt.Errorf("build rclone config: %w", err)
+	}
+
+	args := []string{
+		"lsjson",
+		"--config", f.Name(),
+		fmt.Sprintf("%s:", remote),
+	}
+	log.Info("running rclone", "args", args)
+	cmd := exec.CommandContext(ctx, "rclone", args...)
+	cmd.Stderr = os.Stderr
+	data, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("rclone lsjson: %w", err)
+	}
+
+	var files []FileInfo
+	err = json.Unmarshal(data, &files)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal json: %w", err)
+	}
+
+	buckets := make([]string, 0, len(files))
+	for _, f := range files {
+		if f.IsBucket {
+			buckets = append(buckets, f.Name)
+		}
+	}
+
+	log.Info("rclone lsjson complete", "buckets", buckets)
+	return buckets, nil
+}
+
+type FileInfo struct {
+	Hashes        Hashes    `json:"Hashes"`
+	ID            string    `json:"ID"`
+	OrigID        string    `json:"OrigID"`
+	IsBucket      bool      `json:"IsBucket"`
+	IsDir         bool      `json:"IsDir"`
+	MimeType      string    `json:"MimeType"`
+	ModTime       time.Time `json:"ModTime"`
+	Name          string    `json:"Name"`
+	Encrypted     string    `json:"Encrypted"`
+	EncryptedPath string    `json:"EncryptedPath"`
+	Path          string    `json:"Path"`
+	Size          int64     `json:"Size"`
+	Tier          string    `json:"Tier"`
+}
+
+type Hashes struct {
+	SHA1        string `json:"SHA-1"`
+	MD5         string `json:"MD5"`
+	DropboxHash string `json:"DropboxHash"`
 }

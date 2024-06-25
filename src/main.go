@@ -2,18 +2,55 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
-	"sync"
+
+	"github.com/sourcegraph/conc/iter"
 )
 
 func main() {
+
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: s32s3 <command>")
+		fmt.Println("Commands:")
+		fmt.Println("  backup - backup all buckets")
+		fmt.Println("  restore - restore all buckets")
+		os.Exit(1)
+	}
+
+	switch os.Args[1] {
+	case "backup":
+		Backup()
+	case "restore":
+		Restore()
+	default:
+		fmt.Println("Unknown command", os.Args[1])
+		os.Exit(1)
+	}
+}
+
+func Restore() error {
+	panic("TODO: unimplemented")
+}
+
+func Backup() {
 	config, err := Config()
 	if err != nil {
 		panic(err)
 	}
 
-	src, err := NewMinio(config.Source.S3Config)
+	src, err := NewMinio(config.Source.Value)
+	if err != nil {
+		panic(err)
+	}
+
+	dest, err := NewMinio(config.Dest.Value)
+	if err != nil {
+		panic(err)
+	}
+
+	err = dest.AssertOrCreateBucket(context.Background(), config.BackupBucket)
 	if err != nil {
 		panic(err)
 	}
@@ -24,20 +61,12 @@ func main() {
 	}
 
 	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	wg := sync.WaitGroup{}
-	for _, bucket := range buckets {
-		wg.Add(1)
-		go func(bucket string) {
-			defer wg.Done()
-			l := l.With("bucket", bucket)
-			l.Info("syncing bucket")
-			err := RcloneSyncBucket(context.Background(), l, config, bucket)
-			if err != nil {
-				panic(err)
-			}
-		}(bucket)
-	}
-
-	wg.Wait()
+	iter.ForEach(buckets, func(bucket *string) {
+		l := l.With("bucket", *bucket)
+		l.Info("syncing bucket")
+		err := RcloneSyncBucket(context.Background(), l, config, *bucket)
+		if err != nil {
+			panic(err)
+		}
+	})
 }

@@ -9,16 +9,18 @@ fullnameOverride: ""
 
 config:
   schedule: "* * * * *"
-  bucketPrefix: "backup-"
-  # destination and source are fields to `env[]`
-  # eg
-  #   value: "ABVC"
-  # or
-  #   valueFrom:
-  #     secretKeyRef:
-  #       name: ""
-  #       key: ""
+  backupBucket: "backups"
+  extraEnv: {}
+  # key: value
   destination:
+    # destination and source are fields to `env[]`
+    # eg
+    #   value: "ABVC"
+    # or
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: ""
+    #       key: ""
     access_key_id: {}
     secret_access_key: {}
     endpoint: {}

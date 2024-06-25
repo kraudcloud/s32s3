@@ -1,85 +1,56 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 
-	"gitlab.com/zephyrtronium/valid"
+	"github.com/rclone/rclone/backend/crypt"
+	"github.com/rclone/rclone/backend/s3"
+	"github.com/rclone/rclone/fs/config/obscure"
 )
 
 type (
-	S3Config struct {
-		Provider        string `env:"PROVIDER"`
-		Region          string `env:"REGION"`
-		Endpoint        string `env:"ENDPOINT"`
-		AccessKeyID     string `env:"ACCESS_KEY_ID"`
-		SecretAccessKey string `env:"SECRET_ACCESS_KEY"`
-	}
-
-	Source struct {
-		S3Config
-		Name string
-	}
-
-	Dest struct {
-		S3Config
-		Name string
-	}
-
-	Crypt struct {
-		Name      string `env:"NAME"`
-		Password  string `env:"PASSWORD"`
-		Password2 string `env:"PASSWORD2"`
+	Wrapped[T any] struct {
+		Name  string
+		Type  string
+		Value T
 	}
 
 	BackupConfig struct {
-		Dest   Dest   `env:"DEST"`
-		Source Source `env:"SOURCE"`
-		Crypt  Crypt  `env:"CRYPT"`
+		Dest   Wrapped[s3.Options]    `config:"DEST"`
+		Source Wrapped[s3.Options]    `config:"SOURCE"`
+		Crypt  Wrapped[crypt.Options] `config:"CRYPT"`
 
-		Prefix string `env:"BUCKET_PREFIX"`
+		BackupBucket string `config:"BACKUP_BUCKET"`
 	}
 )
 
-var supportedProviders = []string{"Minio"}
-
-func (s S3Config) Validate() error {
-	return valid.Check(nil, []valid.Condition{
-		{Name: "provider", Missing: s.Provider == "", Invalid: !slices.Contains(supportedProviders, s.Provider)},
-		{Name: "region", Missing: s.Region == ""},
-		{Name: "endpoint", Missing: s.Endpoint == ""},
-		{Name: "access key id", Missing: s.AccessKeyID == ""},
-		{Name: "secret access key", Missing: s.SecretAccessKey == ""},
-	})
-}
-
-func (s Crypt) Validate() error {
-	return valid.Check(nil, []valid.Condition{
-		{Name: "password", Missing: s.Password == "", Invalid: len(s.Password) < 8},
-		{Name: "password2", Missing: s.Password2 == "", Invalid: s.Password == s.Password2},
-	})
-}
-
-func (b BackupConfig) Validate() error {
-	var outer error
-	if err := b.Source.Validate(); err != nil {
-		outer = errors.Join(outer, fmt.Errorf("source: %w", err))
+func (n Wrapped[T]) EncodeIni(w io.Writer) error {
+	v := reflect.ValueOf(n.Value)
+	if v.Kind() != reflect.Struct {
+		return fmt.Errorf("invalid type: %s", v.Kind())
 	}
 
-	if err := b.Dest.Validate(); err != nil {
-		outer = errors.Join(outer, fmt.Errorf("dest: %w", err))
+	// https://rclone.org/crypt/#configuration
+	// https://rclone.org/s3/#configuration
+	fmt.Fprintf(w, "[%s]\n", n.Name)
+	fmt.Fprintf(w, "  type = %s\n", n.Type)
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		t := v.Type().Field(i)
+		if f.IsZero() {
+			continue
+		}
+
+		fmt.Fprintf(w, "  %s = %v\n", t.Tag.Get("config"), f.Interface())
 	}
 
-	if err := b.Crypt.Validate(); err != nil {
-		outer = errors.Join(outer, fmt.Errorf("crypt: %w", err))
-	}
-
-	return outer
+	fmt.Fprintln(w)
+	return nil
 }
 
 func Config() (BackupConfig, error) {
@@ -87,24 +58,54 @@ func Config() (BackupConfig, error) {
 }
 
 const (
-	sourceName    = "source"
-	destName      = "dest"
-	cryptName     = "crypt"
-	prefixDefault = "backup-"
+	sourceName = "source"
+	destName   = "dest"
+	cryptName  = "crypt"
+	bucketName = "backup"
 )
+
+func (c BackupConfig) Validate() error {
+	if c.Source.Value.Endpoint == "" {
+		return fmt.Errorf("source endpoint is required")
+	}
+
+	if c.Dest.Value.Endpoint == "" {
+		return fmt.Errorf("dest endpoint is required")
+	}
+
+	if c.Crypt.Value.Password == "" {
+		return fmt.Errorf("crypt password is required")
+	}
+
+	if c.Crypt.Value.Password2 == "" {
+		return fmt.Errorf("crypt password2 is required")
+	}
+
+	return nil
+}
 
 func ConfigFromEnv(c map[string]string) (BackupConfig, error) {
 	out := BackupConfig{
-		Dest: Dest{
+		Dest: Wrapped[s3.Options]{
 			Name: destName,
+			Type: "s3",
 		},
-		Source: Source{
+		Source: Wrapped[s3.Options]{
 			Name: sourceName,
+			Type: "s3",
 		},
-		Crypt: Crypt{
+		Crypt: Wrapped[crypt.Options]{
 			Name: cryptName,
+			Type: "crypt",
+			Value: crypt.Options{
+				Remote:                  fmt.Sprintf("%s:%s", destName, bucketName),
+				FilenameEncryption:      "standard",
+				FilenameEncoding:        "base32",
+				DirectoryNameEncryption: true,
+				Suffix:                  ".bin",
+			},
 		},
-		Prefix: prefixDefault,
+		BackupBucket: bucketName,
 	}
 
 	err := fromEnvStruct(c, "", &out)
@@ -112,8 +113,26 @@ func ConfigFromEnv(c map[string]string) (BackupConfig, error) {
 		return BackupConfig{}, err
 	}
 
+	pas1, err := obscure.Obscure(out.Crypt.Value.Password)
+	if err != nil {
+		return BackupConfig{}, fmt.Errorf("obscure password: %w", err)
+	}
+
+	pas2, err := obscure.Obscure(out.Crypt.Value.Password2)
+	if err != nil {
+		return BackupConfig{}, fmt.Errorf("obscure password2: %w", err)
+	}
+
+	out.Crypt.Value.Password = pas1
+	out.Crypt.Value.Password2 = pas2
+	out.Crypt.Value.Remote = fmt.Sprintf("%s:%s", destName, out.BackupBucket)
+
 	if err := out.Validate(); err != nil {
 		return BackupConfig{}, err
+	}
+
+	if os.Getenv("DEBUG_CONFIG") != "" {
+		EncodeConfig(os.Stderr, out)
 	}
 
 	return out, nil
@@ -137,16 +156,16 @@ func fromEnvStruct(c map[string]string, prefix string, out any) error {
 	fvs := reflect.ValueOf(out).Elem()
 	fields := reflect.TypeOf(out).Elem()
 	for _, field := range reflect.VisibleFields(fields) {
-		tag := field.Tag.Get("env")
-
+		tag, tagExists := field.Tag.Lookup("config")
 		if prefix != "" {
-			if tag != "" {
+			if tagExists {
 				tag = prefix + "_" + tag
 			} else {
 				tag = prefix
 			}
 		}
 
+		tag = strings.ToUpper(tag)
 		fv := fvs.FieldByName(field.Name)
 		if field.Type.Kind() == reflect.Struct {
 			err := fromEnvStruct(c, tag, fv.Addr().Interface())
@@ -157,7 +176,7 @@ func fromEnvStruct(c map[string]string, prefix string, out any) error {
 			continue
 		}
 
-		if tag == "" {
+		if !tagExists {
 			continue
 		}
 
@@ -165,6 +184,7 @@ func fromEnvStruct(c map[string]string, prefix string, out any) error {
 		if !ok {
 			continue
 		}
+
 		unmarshalValue(value, field.Type, fv)
 	}
 

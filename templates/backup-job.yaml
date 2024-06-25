@@ -33,8 +33,8 @@ spec:
               args:
                 - backup
               env:
-                - name: BUCKET_PREFIX
-                  value: {{ .Values.config.bucketPrefix | quote }}
+                - name: BACKUP_BUCKET
+                  value: {{ .Values.config.backupBucket | quote }}
                 - name: CRYPT_PASSWORD
                   {{- if .Values.config.crypt.password }}
                   {{- .Values.config.crypt.password | toYaml | nindent 18}}
@@ -54,4 +54,8 @@ spec:
                   {{- range $key, $value :=.Values.config.source }}
                 - name: SOURCE_{{ $key | upper }}
                   {{- $value | toYaml | nindent 18}}
+                  {{- end }}
+                  {{- range $key, $value := .Values.config.extraEnv}}
+                - name: {{ $key | quote }}
+                  value: {{ $value | quote }}
                   {{- end }}
