@@ -23,6 +23,10 @@ func main() {
 		Backup()
 	case "restore":
 		Restore()
+	case "rclone-config":
+		RcloneConfig()
+	case "minio-config":
+		MinioConfig()
 	default:
 		fmt.Println("Unknown command", os.Args[1])
 		os.Exit(1)
@@ -36,27 +40,6 @@ func Restore() {
 	}
 
 	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	dst, err := TargetFactory(config.Dest, l.With("target", config.Dest.Name))
-	if err != nil {
-		panic(err)
-	}
-
-	meta, err := dst.BackupMeta(context.Background())
-	if err != nil {
-		panic(err)
-	}
-
-	src, err := TargetFactory(config.Source, l.With("target", config.Source.Name))
-	if err != nil {
-		panic(err)
-	}
-
-	// TODO
-	err = src.RestoreMeta(context.Background(), meta)
-	if err != nil {
-		panic(err)
-	}
-
 	buckets, err := RcloneListBucketsRemote(context.Background(), l.With("target", config.Crypt.Name), config, config.Crypt.Name)
 	if err != nil {
 		panic(err)
@@ -65,16 +48,46 @@ func Restore() {
 	iter.ForEach(buckets, func(bucket *string) {
 		l := l.With("bucket", *bucket).With("source", config.Crypt.Name).With("dest", config.Source.Name)
 		l.Info("restoring bucket")
-		err := RcloneSyncBucket(context.Background(), l, config, SyncBucketOptions{
+		err := RcloneSyncBucket(context.Background(), config, SyncBucketOptions{
 			Bucket: *bucket,
 			Source: config.Crypt.Name,
 			Dest:   config.Source.Name,
+			log:    l,
 		})
 		if err != nil {
 			l.Error("failed to restore bucket", "err", err)
 			return
 		}
 	})
+}
+
+func RcloneConfig() {
+	config, err := Config()
+	if err != nil {
+		panic(err)
+	}
+
+	EncodeConfig(os.Stdout, config)
+}
+
+func MinioConfig() {
+	config, err := Config()
+	if err != nil {
+		panic(err)
+	}
+
+	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	src, err := NewMinio(l.With("target", config.Source.Name), config.Source.Value)
+	if err != nil {
+		panic(err)
+	}
+
+	path, err := src.SourceMetadata(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(path)
 }
 
 func Backup() {
@@ -84,12 +97,12 @@ func Backup() {
 	}
 
 	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	src, err := TargetFactory(config.Source, l.With("target", config.Source.Name))
+	src, err := NewMinio(l.With("target", config.Source.Name), config.Source.Value)
 	if err != nil {
 		panic(err)
 	}
 
-	dest, err := TargetFactory(config.Dest, l.With("target", config.Dest.Name))
+	dest, err := NewMinio(l.With("target", config.Dest.Name), config.Dest.Value)
 	if err != nil {
 		panic(err)
 	}
@@ -99,6 +112,17 @@ func Backup() {
 		panic(err)
 	}
 
+	metapath, err := src.SourceMetadata(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	RcloneSyncFile(context.Background(), config, SyncFileOptions{
+		File: metapath,
+		Dest: config.Crypt.Name,
+		log:  l,
+	})
+
 	buckets, err := src.ListBuckets(context.Background())
 	if err != nil {
 		panic(err)
@@ -107,10 +131,11 @@ func Backup() {
 	iter.ForEach(buckets, func(bucket *string) {
 		l := l.With("bucket", *bucket).With("source", config.Source.Name).With("dest", config.Crypt.Name)
 		l.Info("backing up bucket")
-		err := RcloneSyncBucket(context.Background(), l, config, SyncBucketOptions{
+		err := RcloneSyncBucket(context.Background(), config, SyncBucketOptions{
 			Bucket: *bucket,
 			Source: config.Source.Name,
 			Dest:   config.Crypt.Name,
+			log:    l,
 		})
 		if err != nil {
 			l.Error("failed to backup bucket", "err", err)

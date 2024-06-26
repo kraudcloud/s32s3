@@ -32,9 +32,10 @@ type SyncBucketOptions struct {
 	Bucket string
 	Source string
 	Dest   string
+	log    *slog.Logger
 }
 
-func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig, o SyncBucketOptions) error {
+func RcloneSyncBucket(ctx context.Context, config BackupConfig, o SyncBucketOptions) error {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -54,7 +55,7 @@ func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig
 		fmt.Sprintf("%s:%s", o.Dest, o.Bucket),
 	}
 
-	log.Info("running rclone", "args", args)
+	o.log.Info("running rclone", "args", args)
 
 	cmd := exec.CommandContext(ctx, "rclone", args...)
 	cmd.Stdout = os.Stdout
@@ -64,7 +65,46 @@ func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig
 		return fmt.Errorf("rclone sync: %w", err)
 	}
 
-	log.Info("rclone sync complete")
+	o.log.Info("rclone sync complete")
+	return nil
+}
+
+type SyncFileOptions struct {
+	File string
+	Dest string
+	log  *slog.Logger
+}
+
+func RcloneSyncFile(ctx context.Context, config BackupConfig, opts SyncFileOptions) error {
+	f, err := os.CreateTemp("", "rclone.conf")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	err = EncodeConfig(f, config)
+	if err != nil {
+		return fmt.Errorf("build rclone config: %w", err)
+	}
+
+	args := []string{
+		"sync",
+		"--config", f.Name(),
+		opts.File,
+		fmt.Sprintf("%s:", opts.Dest),
+	}
+
+	opts.log.Info("running rclone", "args", args)
+	cmd := exec.CommandContext(ctx, "rclone", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("rclone sync: %w", err)
+	}
+
+	opts.log.Info("rclone sync complete")
 	return nil
 }
 
