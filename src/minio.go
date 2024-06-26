@@ -12,8 +12,10 @@ import (
 )
 
 type Minio struct {
-	config s3.Options
-	client *minio.Client
+	log      *slog.Logger
+	config   s3.Options
+	client   *minio.Client
+	isBackup bool
 }
 
 var _ Target = (*Minio)(nil)
@@ -38,6 +40,8 @@ func (m *Minio) ListBuckets(ctx context.Context) ([]string, error) {
 // OIDC configuration, etc.
 // Only `Minio` is supposed to support it
 func (m *Minio) BackupMeta(ctx context.Context) ([]byte, error) {
+	// if m.isBackup {
+	// }
 	return nil, nil
 }
 
@@ -47,7 +51,7 @@ func (m *Minio) RestoreMeta(ctx context.Context, meta []byte) error {
 }
 
 func (m *Minio) AssertOrCreateBucket(ctx context.Context, name string) error {
-	log := slog.With("bucket", name)
+	log := m.log.With("bucket", name)
 	log.Info("checking if bucket exists", "bucket", name)
 	exists, err := m.client.BucketExists(ctx, name)
 	if err != nil {
@@ -55,6 +59,7 @@ func (m *Minio) AssertOrCreateBucket(ctx context.Context, name string) error {
 	}
 
 	if exists {
+		log.Info("found bucket")
 		return nil
 	}
 
@@ -88,7 +93,7 @@ func (m *Minio) AssertOrCreateBucket(ctx context.Context, name string) error {
 	return nil
 }
 
-func NewMinio(config s3.Options) (*Minio, error) {
+func NewMinio(logger *slog.Logger, config s3.Options, isBackup bool) (*Minio, error) {
 	u, err := url.Parse(config.Endpoint)
 	if err != nil {
 		return &Minio{}, err
@@ -107,5 +112,5 @@ func NewMinio(config s3.Options) (*Minio, error) {
 		return &Minio{}, err
 	}
 
-	return &Minio{config: config, client: c}, nil
+	return &Minio{log: logger, config: config, client: c, isBackup: isBackup}, nil
 }

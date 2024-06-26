@@ -4,12 +4,27 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
+
+	"github.com/rclone/rclone/backend/s3"
 )
 
 type Target interface {
 	ListBuckets(ctx context.Context) ([]string, error)
 	BackupMeta(ctx context.Context) ([]byte, error)
 	RestoreMeta(ctx context.Context, meta []byte) error
+	AssertOrCreateBucket(ctx context.Context, name string) error
+}
+
+func TargetFactory(config Wrapped[s3.Options], logger *slog.Logger) (Target, error) {
+	switch config.Value.Provider {
+	case "Minio":
+		return NewMinio(logger, config.Value, config.Name == destName)
+	case "mock":
+		return &MockTarget{}, nil
+	default:
+		return nil, fmt.Errorf("unknown target type: %s for %s", config.Type, config.Name)
+	}
 }
 
 type MockTarget struct {
@@ -34,5 +49,17 @@ func (m *MockTarget) RestoreMeta(ctx context.Context, meta []byte) error {
 		m.Meta = meta
 	}
 
+	return nil
+}
+
+func (m *MockTarget) AssertOrCreateBucket(ctx context.Context, name string) error {
+	for _, bucket := range m.Buckets {
+		if bucket == name {
+			return nil // Bucket already exists
+		}
+	}
+
+	// Bucket doesn't exist, create it
+	m.Buckets = append(m.Buckets, name)
 	return nil
 }

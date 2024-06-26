@@ -61,7 +61,7 @@ const (
 	sourceName = "source"
 	destName   = "dest"
 	cryptName  = "crypt"
-	bucketName = "backup"
+	bucketName = "backups"
 )
 
 func (c BackupConfig) Validate() error {

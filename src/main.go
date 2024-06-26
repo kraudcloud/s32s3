@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: s32s3 <command>")
 		fmt.Println("Commands:")
@@ -30,8 +29,52 @@ func main() {
 	}
 }
 
-func Restore() error {
-	panic("TODO: unimplemented")
+func Restore() {
+	config, err := Config()
+	if err != nil {
+		panic(err)
+	}
+
+	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	dst, err := TargetFactory(config.Dest, l.With("target", config.Dest.Name))
+	if err != nil {
+		panic(err)
+	}
+
+	meta, err := dst.BackupMeta(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	src, err := TargetFactory(config.Source, l.With("target", config.Source.Name))
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO
+	err = src.RestoreMeta(context.Background(), meta)
+	if err != nil {
+		panic(err)
+	}
+
+	buckets, err := RcloneListBucketsRemote(context.Background(), l.With("target", config.Crypt.Name), config, config.Crypt.Name)
+	if err != nil {
+		panic(err)
+	}
+
+	iter.ForEach(buckets, func(bucket *string) {
+		l := l.With("bucket", *bucket).With("source", config.Crypt.Name).With("dest", config.Source.Name)
+		l.Info("restoring bucket")
+		err := RcloneSyncBucket(context.Background(), l, config, SyncBucketOptions{
+			Bucket: *bucket,
+			Source: config.Crypt.Name,
+			Dest:   config.Source.Name,
+		})
+		if err != nil {
+			l.Error("failed to restore bucket", "err", err)
+			return
+		}
+	})
 }
 
 func Backup() {
@@ -40,12 +83,13 @@ func Backup() {
 		panic(err)
 	}
 
-	src, err := NewMinio(config.Source.Value)
+	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	src, err := TargetFactory(config.Source, l.With("target", config.Source.Name))
 	if err != nil {
 		panic(err)
 	}
 
-	dest, err := NewMinio(config.Dest.Value)
+	dest, err := TargetFactory(config.Dest, l.With("target", config.Dest.Name))
 	if err != nil {
 		panic(err)
 	}
@@ -60,13 +104,17 @@ func Backup() {
 		panic(err)
 	}
 
-	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	iter.ForEach(buckets, func(bucket *string) {
-		l := l.With("bucket", *bucket)
-		l.Info("syncing bucket")
-		err := RcloneSyncBucket(context.Background(), l, config, *bucket)
+		l := l.With("bucket", *bucket).With("source", config.Source.Name).With("dest", config.Crypt.Name)
+		l.Info("backing up bucket")
+		err := RcloneSyncBucket(context.Background(), l, config, SyncBucketOptions{
+			Bucket: *bucket,
+			Source: config.Source.Name,
+			Dest:   config.Crypt.Name,
+		})
 		if err != nil {
-			panic(err)
+			l.Error("failed to backup bucket", "err", err)
+			return
 		}
 	})
 }

@@ -12,6 +12,7 @@ import (
 )
 
 func EncodeConfig(w io.Writer, c BackupConfig) error {
+	fmt.Fprintf(w, "# backup_bucket = %s\n", c.BackupBucket)
 	if err := c.Source.EncodeIni(w); err != nil {
 		return fmt.Errorf("source: encode ini: %w", err)
 	}
@@ -27,7 +28,13 @@ func EncodeConfig(w io.Writer, c BackupConfig) error {
 	return nil
 }
 
-func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig, bucket string) error {
+type SyncBucketOptions struct {
+	Bucket string
+	Source string
+	Dest   string
+}
+
+func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig, o SyncBucketOptions) error {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -43,8 +50,8 @@ func RcloneSyncBucket(ctx context.Context, log *slog.Logger, config BackupConfig
 	args := []string{
 		"sync",
 		"--config", f.Name(),
-		fmt.Sprintf("%s:%s", config.Source.Name, bucket),
-		fmt.Sprintf("%s:%s", config.Crypt.Name, bucket),
+		fmt.Sprintf("%s:%s", o.Source, o.Bucket),
+		fmt.Sprintf("%s:%s", o.Dest, o.Bucket),
 	}
 
 	log.Info("running rclone", "args", args)
