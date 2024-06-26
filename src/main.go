@@ -107,7 +107,10 @@ func Backup() {
 		panic(err)
 	}
 
-	err = dest.AssertOrCreateBucket(context.Background(), config.BackupBucket)
+	err = dest.AssertOrCreateBucket(context.Background(), BackupBucketOptions{
+		Bucket:         config.BackupBucket,
+		ExpirationDays: config.ExpirationDays,
+	})
 	if err != nil {
 		panic(err)
 	}

@@ -125,10 +125,15 @@ func (m *Minio) RestoreMeta(ctx context.Context, meta string) error {
 	return nil
 }
 
-func (m *Minio) AssertOrCreateBucket(ctx context.Context, name string) error {
-	log := m.log.With("bucket", name)
-	log.Info("checking if bucket exists", "bucket", name)
-	exists, err := m.client.BucketExists(ctx, name)
+type BackupBucketOptions struct {
+	ExpirationDays int
+	Bucket         string
+}
+
+func (m *Minio) AssertOrCreateBucket(ctx context.Context, opt BackupBucketOptions) error {
+	log := m.log.With("bucket", opt.Bucket)
+	log.Info("checking if bucket exists")
+	exists, err := m.client.BucketExists(ctx, opt.Bucket)
 	if err != nil {
 		return err
 	}
@@ -139,23 +144,30 @@ func (m *Minio) AssertOrCreateBucket(ctx context.Context, name string) error {
 	}
 
 	log.Info("creating bucket")
-	err = m.client.MakeBucket(ctx, name, minio.MakeBucketOptions{})
+	err = m.client.MakeBucket(ctx, opt.Bucket, minio.MakeBucketOptions{})
 	if err != nil {
 		return err
 	}
 
+	if opt.ExpirationDays < 0 {
+		return nil
+	}
+	if opt.ExpirationDays == 0 {
+		opt.ExpirationDays = 7
+	}
+
 	log.Info("enabling versioning")
-	err = m.client.EnableVersioning(ctx, name)
+	err = m.client.EnableVersioning(ctx, opt.Bucket)
 	if err != nil {
 		return err
 	}
 
 	log.Info("setting lifecycle")
-	err = m.client.SetBucketLifecycle(ctx, name, &lifecycle.Configuration{
+	err = m.client.SetBucketLifecycle(ctx, opt.Bucket, &lifecycle.Configuration{
 		Rules: []lifecycle.Rule{
 			{
 				NoncurrentVersionExpiration: lifecycle.NoncurrentVersionExpiration{
-					NoncurrentDays: 30,
+					NoncurrentDays: lifecycle.ExpirationDays(opt.ExpirationDays),
 				},
 				Status: "Enabled",
 			},

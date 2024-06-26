@@ -25,6 +25,8 @@ config:
   schedule: "* * * * *"
   ## @param config.backupBucket Name of the backup bucket
   backupBucket: "backups"
+  ## @param config.expirationDays Number of days until deleted versions are removed from backups
+  expirationDays: 7
   ## @param config.extraEnv [object] Extra environment variables
   extraEnv: {}
   # key: value

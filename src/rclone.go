@@ -13,6 +13,7 @@ import (
 
 func EncodeConfig(w io.Writer, c BackupConfig) error {
 	fmt.Fprintf(w, "# backup_bucket = %s\n", c.BackupBucket)
+	fmt.Fprintf(w, "# expiration_days = %d\n", c.ExpirationDays)
 	if err := c.Source.EncodeIni(w); err != nil {
 		return fmt.Errorf("source: encode ini: %w", err)
 	}

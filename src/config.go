@@ -25,7 +25,8 @@ type (
 		Source Wrapped[s3.Options]    `config:"SOURCE"`
 		Crypt  Wrapped[crypt.Options] `config:"CRYPT"`
 
-		BackupBucket string `config:"BACKUP_BUCKET"`
+		BackupBucket   string `config:"BACKUP_BUCKET"`
+		ExpirationDays int    `config:"EXPIRATION_DAYS"`
 	}
 )
 

@@ -33,6 +33,8 @@ spec:
           - name: BACKUP_BUCKET
             value: {{ .Values.config.backupBucket | quote }}
             {{- range $key, $value := .Values.config.extraEnv}}
+          - name: EXPIRATION_DAYS
+            value: {{ .Values.config.expirationDays | quote }}
           - name: {{ $key | quote }}
             value: {{ $value | quote }}
             {{- end }}
