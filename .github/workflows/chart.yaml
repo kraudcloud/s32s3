@@ -2,8 +2,8 @@ name: Release Charts
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "*"
 
 jobs:
   release:
@@ -14,15 +14,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Chart version
-        id: chart_version
-        run: echo "chart_version=$(cat ./Chart.yaml | grep '^version:' | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-
       - name: Run chart-releaser
         uses: Karitham/helm-oci-chart-releaser@f2f293f8f796568f47dfaea603ae61e2b3b3fa41
         with:
           name: s32s3-chart
-          tag: ${{ steps.chart_version.outputs.chart_version }}
+          tag: ${{ github.ref_name }}
           path: ./
           registry: ctr.0x.pt
           repository: ops

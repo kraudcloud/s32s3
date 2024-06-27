@@ -26,6 +26,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./src
+          context: .
           push: true
-          tags: ${{env.IMAGE}}:latest${{ if github.ref_type == 'tag' }},${{env.IMAGE}}:${{ github.ref_name }}${{ end }}
+          tags: |
+            ${{env.IMAGE}}:latest
+            ${{ github.ref_type == 'tag' && format('{0}:{1}', env.IMAGE, github.ref_name) || '' }}
