@@ -5,7 +5,7 @@ metadata:
   namespace: {{.Release.Namespace }}
   labels: {{ include "s32s3.labels" . | nindent 4 }}
 spec:
-  schedule: {{ default "* * * * *" .Values.schedule | quote }}
+  schedule: {{ .Values.config.schedule | quote }}
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
@@ -19,7 +19,6 @@ spec:
       template:
         spec:
           imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 12 }}
-          serviceAccountName: {{.Release.Name }}
           securityContext: {{ toYaml .Values.podSecurityContext | nindent 12 }}
           nodeSelector: {{ toYaml .Values.nodeSelector | nindent 12 }}
           tolerations: {{ toYaml .Values.tolerations | nindent 12 }}
@@ -33,19 +32,20 @@ spec:
               args:
                 - backup
               env:
-                - name: RCLONE_BUCKET_PREFIX
-                  value: {{ .Values.job.bucketPrefix | quote }}
-                - name: RCLONE_CONFIG_PATH
-                  value: /config/rclone/rclone.conf
-                {{range $key, $value :=.Values.job.env }}
-                - name: {{ $key | quote }}
-                  value: {{ $value | quote }}
+                {{- range $key, $value := .Values.config.crypt -}}
+                {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 14 }}
                 {{- end }}
-              volumeMounts:
-              - name: config
-                mountPath: /config/rclone/rclone.conf
-                subPath: rclone.conf
-          volumes:
-            - name: config
-              secret:
-                secretName: {{.Release.Name }}-config
+                {{- range $key, $value := .Values.config.destination -}}
+                {{- include "s32s3.env" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 14 }}
+                {{- end }}
+                {{- range $key, $value := .Values.config.source -}}
+                {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 14 }}
+                {{- end }}
+              - name: BACKUP_BUCKET
+                value: {{ .Values.config.backupBucket | quote }}
+                {{- range $key, $value := .Values.config.extraEnv}}
+              - name: EXPIRATION_DAYS
+                value: {{ .Values.config.expirationDays | quote }}
+              - name: {{ $key | quote }}
+                value: {{ $value | quote }}
+                {{- end }}

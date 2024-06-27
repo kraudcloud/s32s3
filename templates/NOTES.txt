@@ -1,6 +1,6 @@
-We generated the configuration for you, please make a backup of it. If you lose it you will be unable to recover your backups.
-
-$ kubectl get secret {{.Release.Name }}-config -o yaml | base64 -d
-
-Backups are now running on schedule ({{.Values.schedule | quote}}). Make sure they are running by querying the pods or the job history once in a while.
-
+{{- if .Values.restore.enabled }}
+Running a restore job.
+{{- else }}
+Backups are now running on schedule ({{.Values.config.schedule | quote}}).
+Make sure they are running by querying the pods or the job history once in a while.
+{{- end }}

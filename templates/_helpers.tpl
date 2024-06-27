@@ -49,3 +49,33 @@ Selector labels
 app.kubernetes.io/name: {{ include "s32s3.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{- define "s32s3.envRequired" -}}
+{{- $name := index . 0 -}}
+{{- $env := index . 1 -}}
+{{- $value := index . 2 -}}
+- name: {{ $env | quote }}
+{{- if $value.value }}
+  value: {{ $value.value | quote }}
+{{- else if $value.valueFrom }}
+  valueFrom:
+    {{- toYaml $value.valueFrom | nindent 4 }}
+{{- else }}
+{{- fail (printf ".%s must have either value or valueFrom specified" $name)}}
+{{- end }}
+{{- end }}
+
+{{- define "s32s3.env" -}}
+{{- $name := index . 0 -}}
+{{- $env := index . 1 -}}
+{{- $value := index . 2 -}}
+{{- if $value.value }}
+- name: {{ $env | quote }}
+  value: {{ $value.value | quote }}
+{{- else if $value.valueFrom }}
+- name: {{ $env | quote }}
+  valueFrom:
+    {{- toYaml $value.valueFrom | nindent 4 }}
+{{- else }}
+{{- end }}
+{{- end }}

@@ -1,48 +1,73 @@
+## @section Image Configuration
+## @param image.repository Repository of the image
+## @param image.pullPolicy Pull policy for the image
+## @param image.tag Tag of the image
 image:
   repository: ctr.0x.pt/ops/s32s3
   pullPolicy: IfNotPresent
   tag: "latest"
 
+## @param imagePullSecrets [array] Image pull secrets
+## @param nameOverride [string] Override the name of the chart
+## @param fullnameOverride [string] Override the full name of the chart
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-schedule: ""
+## @section Restore
+restore:
+  ## @param restore.enabled Enable restore mode
+  enabled: false
 
+## @section Configuration
 config:
-  # destination and source are fields to `env[]`
-  # eg
-  #   value: "ABVC"
-  # or
-  #   valueFrom:
-  #     secretKeyRef:
-  #       name: ""
-  #       key: ""
+  ## @param config.schedule Cron schedule for backups
+  schedule: "* * * * *"
+  ## @param config.backupBucket Name of the backup bucket
+  backupBucket: "backups"
+  ## @param config.expirationDays Number of days until deleted versions are removed from backups
+  expirationDays: 7
+  ## @param config.extraEnv [object] Extra environment variables
+  extraEnv: {}
+  # key: value
   destination:
+    ## @param config.destination.access_key_id [object] Destination access key ID. Using valueFrom referencing the minio secret is recommended for easy restores.
     access_key_id: {}
+    ## @param config.destination.secret_access_key [object] Destination secret access key. Using valueFrom referencing the minio secret is recommended for easy restores.
     secret_access_key: {}
+    ## @param config.destination.endpoint [object] Destination endpoint
     endpoint: {}
+    ## @param config.destination.region [object] Destination region
+    region: {}
+    ## @param config.destination.provider [object] Destination provider
     provider:
       value: "Minio"
   source:
+    ## @param config.source.access_key_id [object] Source access key ID
     access_key_id: {}
+    ## @param config.source.secret_access_key [object] Source secret access key
     secret_access_key: {}
+    ## @param config.source.endpoint [object] Source endpoint
     endpoint: {}
+    ## @param config.source.region [object] Source region
+    region: {}
+    ## @param config.source.provider [object] Source provider
     provider:
       value: "Minio"
   crypt:
+    ## @param config.crypt.password [object] Encryption password
     password: {}
+    ## @param config.crypt.password2 [object] Secondary encryption password
     password2: {}
 
-job:
-  env: {}
-  # key: value
-  bucketPrefix: "backup-"
-
+## @param podAnnotations [object] Annotations for pods
 podAnnotations: {}
+## @param podLabels [object] Labels for pods
 podLabels: {}
+## @param podSecurityContext [object] Security context for pods
 podSecurityContext: {}
 
+## @param resources [object] Resource requests and limits
 resources: {}
 # We usually recommend not to specify default resources and to leave this as a conscious
 # choice for the user. This also increases chances charts run on environments with little
@@ -55,6 +80,9 @@ resources: {}
 #   cpu: 100m
 #   memory: 128Mi
 
+## @param nodeSelector [object] Node selector for pods
 nodeSelector: {}
+## @param tolerations [array] Tolerations for pods
 tolerations: []
+## @param affinity [object] Affinity for pods
 affinity: {}
