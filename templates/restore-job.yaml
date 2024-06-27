@@ -21,15 +21,19 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - restore
+            {{- if .Values.restore.at }}
+            - --at
+            - {{ .Values.restore.at | quote }}
+            {{- end }}
           env:
             {{- range $key, $value := .Values.config.crypt -}}
-            {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 16 }}
+            {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 10 }}
             {{- end }}
             {{- range $key, $value := .Values.config.destination -}}
-            {{- include "s32s3.env" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 16 }}
+            {{- include "s32s3.env" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 10 }}
             {{- end }}
             {{- range $key, $value := .Values.config.source -}}
-            {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 16 }}
+            {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 10 }}
             {{- end }}
           - name: BACKUP_BUCKET
             value: {{ .Values.config.backupBucket | quote }}

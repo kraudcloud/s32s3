@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"time"
 
 	"github.com/sourcegraph/conc/iter"
 	"github.com/urfave/cli/v3"
@@ -25,23 +24,20 @@ func main() {
 			Name:  "restore",
 			Usage: "restore all buckets and instance metadata",
 			Flags: []cli.Flag{
-				&cli.TimestampFlag{
+				&cli.StringFlag{
 					Name:  "at",
 					Usage: "restore at specific time",
-					Config: cli.TimestampConfig{
-						Layout:   "2006-01-02T15:04:05",
-						Timezone: time.Local,
-					},
 				},
 			},
 			Action: func(ctx context.Context, c *cli.Command) error {
-				at := c.Timestamp("at")
-				if at.IsZero() {
-					Restore(ctx)
-					return nil
+				atflag := c.String("at")
+				var at *string
+				if atflag != "" {
+					at = &atflag
 				}
 
-				return fmt.Errorf("restore at is not implemented (at: %s)", at.String())
+				Restore(ctx, at)
+				return nil
 			},
 		},
 		{
@@ -75,7 +71,7 @@ func main() {
 	}
 }
 
-func Restore(ctx context.Context) {
+func Restore(ctx context.Context, at *string) {
 	config, err := Config()
 	if err != nil {
 		panic(err)
@@ -86,6 +82,7 @@ func Restore(ctx context.Context) {
 	file, err := RcloneDownloadFile(ctx, config, DownloadFileOptions{
 		File:   SourceMetadata,
 		Source: config.Crypt.Name,
+		At:     at,
 		log:    l.With("target", config.Crypt.Name),
 	})
 	if err != nil {
@@ -103,12 +100,14 @@ func Restore(ctx context.Context) {
 
 	buckets, err := RcloneListBucketsRemote(ctx, config, ListBucketsOptions{
 		Remote: config.Crypt.Name,
+		At:     at,
 		log:    l.With("target", config.Crypt.Name),
 	})
 	if err != nil {
 		panic(err)
 	}
 
+	var errored bool
 	iter.ForEach(buckets, func(bucket *string) {
 		l := l.With("bucket", *bucket).With("source", config.Crypt.Name).With("dest", config.Source.Name)
 		l.Info("restoring bucket")
@@ -116,13 +115,18 @@ func Restore(ctx context.Context) {
 			Bucket: *bucket,
 			Source: config.Crypt.Name,
 			Dest:   config.Source.Name,
+			At:     at,
 			log:    l,
 		})
 		if err != nil {
 			l.Error("failed to restore bucket", "err", err)
-			return
+			errored = true
 		}
 	})
+
+	if errored {
+		os.Exit(1)
+	}
 }
 
 func RcloneConfig(ctx context.Context) {

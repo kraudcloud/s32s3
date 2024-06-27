@@ -35,11 +35,12 @@ type SyncBucketOptions struct {
 	Bucket string
 	Source string
 	Dest   string
+	At     *string
 	log    *slog.Logger
 }
 
 // RcloneSyncBucket syncs the specified source bucket to the specified destination bucket using the rclone command.
-func RcloneSyncBucket(ctx context.Context, config BackupConfig, o SyncBucketOptions) error {
+func RcloneSyncBucket(ctx context.Context, config BackupConfig, opts SyncBucketOptions) error {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -47,6 +48,9 @@ func RcloneSyncBucket(ctx context.Context, config BackupConfig, o SyncBucketOpti
 	defer os.Remove(f.Name())
 	defer f.Close()
 
+	if opts.At != nil {
+		config.Dest.Value.VersionAt.Set(*opts.At)
+	}
 	err = EncodeConfig(f, config)
 	if err != nil {
 		return fmt.Errorf("build rclone config: %w", err)
@@ -55,11 +59,11 @@ func RcloneSyncBucket(ctx context.Context, config BackupConfig, o SyncBucketOpti
 	args := []string{
 		"sync",
 		"--config", f.Name(),
-		fmt.Sprintf("%s:%s", o.Source, o.Bucket),
-		fmt.Sprintf("%s:%s", o.Dest, o.Bucket),
+		fmt.Sprintf("%s:%s", opts.Source, opts.Bucket),
+		fmt.Sprintf("%s:%s", opts.Dest, opts.Bucket),
 	}
 
-	o.log.Info("running rclone", "args", args)
+	opts.log.Info("running rclone", "args", args)
 
 	cmd := exec.CommandContext(ctx, "rclone", args...)
 	cmd.Stdout = os.Stdout
@@ -69,13 +73,14 @@ func RcloneSyncBucket(ctx context.Context, config BackupConfig, o SyncBucketOpti
 		return fmt.Errorf("rclone sync: %w", err)
 	}
 
-	o.log.Info("rclone sync complete")
+	opts.log.Info("rclone sync complete")
 	return nil
 }
 
 type SyncFileOptions struct {
 	File string
 	Dest string
+	At   *string
 	log  *slog.Logger
 }
 
@@ -88,6 +93,9 @@ func RcloneSyncFile(ctx context.Context, config BackupConfig, opts SyncFileOptio
 	defer os.Remove(f.Name())
 	defer f.Close()
 
+	if opts.At != nil {
+		config.Dest.Value.VersionAt.Set(*opts.At)
+	}
 	err = EncodeConfig(f, config)
 	if err != nil {
 		return fmt.Errorf("build rclone config: %w", err)
@@ -116,6 +124,7 @@ func RcloneSyncFile(ctx context.Context, config BackupConfig, opts SyncFileOptio
 type DownloadFileOptions struct {
 	File   string
 	Source string
+	At     *string
 	log    *slog.Logger
 }
 
@@ -128,6 +137,9 @@ func RcloneDownloadFile(ctx context.Context, config BackupConfig, opts DownloadF
 	defer os.Remove(f.Name())
 	defer f.Close()
 
+	if opts.At != nil {
+		config.Dest.Value.VersionAt.Set(*opts.At)
+	}
 	err = EncodeConfig(f, config)
 	if err != nil {
 		return "", fmt.Errorf("build rclone config: %w", err)
@@ -161,11 +173,12 @@ func RcloneDownloadFile(ctx context.Context, config BackupConfig, opts DownloadF
 
 type ListBucketsOptions struct {
 	Remote string
+	At     *string
 	log    *slog.Logger
 }
 
 // RcloneListBucketsRemote lists the buckets in the specified remote location using the provided BackupConfig and ListBucketsOptions.
-func RcloneListBucketsRemote(ctx context.Context, config BackupConfig, opt ListBucketsOptions) ([]string, error) {
+func RcloneListBucketsRemote(ctx context.Context, config BackupConfig, opts ListBucketsOptions) ([]string, error) {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
 		return nil, fmt.Errorf("create temp file: %w", err)
@@ -173,6 +186,9 @@ func RcloneListBucketsRemote(ctx context.Context, config BackupConfig, opt ListB
 	defer os.Remove(f.Name())
 	defer f.Close()
 
+	if opts.At != nil {
+		config.Dest.Value.VersionAt.Set(*opts.At)
+	}
 	err = EncodeConfig(f, config)
 	if err != nil {
 		return nil, fmt.Errorf("build rclone config: %w", err)
@@ -181,9 +197,11 @@ func RcloneListBucketsRemote(ctx context.Context, config BackupConfig, opt ListB
 	args := []string{
 		"lsjson",
 		"--config", f.Name(),
-		fmt.Sprintf("%s:", opt.Remote),
+		fmt.Sprintf("%s:", opts.Remote),
 	}
-	opt.log.Info("running rclone", "args", args)
+
+	opts.log.Info("running rclone", "args", args)
+
 	cmd := exec.CommandContext(ctx, "rclone", args...)
 	cmd.Stderr = os.Stderr
 	data, err := cmd.Output()
@@ -204,7 +222,7 @@ func RcloneListBucketsRemote(ctx context.Context, config BackupConfig, opt ListB
 		}
 	}
 
-	opt.log.Info("rclone lsjson complete", "buckets", buckets)
+	opts.log.Info("rclone lsjson complete", "buckets", buckets)
 	return buckets, nil
 }
 

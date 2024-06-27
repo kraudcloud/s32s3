@@ -107,16 +107,17 @@ This process allows for a complete recovery from a destroyed Minio instance to a
 | ------------------ | ----------------------------------- | --------------------- |
 | `image.repository` | Repository of the image             | `ctr.0x.pt/ops/s32s3` |
 | `image.pullPolicy` | Pull policy for the image           | `IfNotPresent`        |
-| `image.tag`        | Tag of the image                    | `latest`              |
+| `image.tag`        | Tag of the image                    | `0.3.0`               |
 | `imagePullSecrets` | Image pull secrets                  | `[]`                  |
 | `nameOverride`     | Override the name of the chart      | `""`                  |
 | `fullnameOverride` | Override the full name of the chart | `""`                  |
 
 ### Restore
 
-| Name              | Description         | Value   |
-| ----------------- | ------------------- | ------- |
-| `restore.enabled` | Enable restore mode | `false` |
+| Name              | Description              | Value   |
+| ----------------- | ------------------------ | ------- |
+| `restore.enabled` | Enable restore mode      | `false` |
+| `restore.at`      | Restore at specific time | `""`    |
 
 ### Configuration
 

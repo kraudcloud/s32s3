@@ -43,3 +43,8 @@ releases:
               value: "password"
             password2:
               value: "salt"
+        restore:
+          enabled: true
+          at: "10h"
+        image:
+          tag: latest
