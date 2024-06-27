@@ -41,15 +41,35 @@ func (m *Minio) ListBuckets(ctx context.Context) ([]string, error) {
 	return buckets, nil
 }
 
-// SourceMetadata returns the additional metadata for an instance, such as IAM configuration
-// OIDC configuration, etc.
+const (
+	// SourceMetadata is the name of the file that contains the additional metadata for an instance, such as IAM configuration
+	SourceMetadata = "metadata.tar.gz"
+
+	// fileIAM is the name of the file that contains the IAM configuration
+	fileIAM = "iam.zip"
+
+	// fileBuckets is the name of the file that contains the bucket metadata
+	fileBuckets = "buckets.zip"
+
+	// fileConfig is the name of the file that contains the Minio configuration
+	fileConfig = "config.txt"
+)
+
+// SourceMetadata returns the additional metadata for an instance
+//
+// The exported data includes:
+// - IAM configuration (fileIAM)
+// - Bucket metadata (fileBuckets)
+// - Minio configuration (fileConfig)
+//
+// The exported data is stored in a tar.gz file in the temporary directory, and the path to the file is returned.
 func (m *Minio) SourceMetadata(ctx context.Context) (string, error) {
 	dir, err := os.MkdirTemp("", "s32s3-*")
 	if err != nil {
 		return "", err
 	}
 
-	f, err := os.Create(filepath.Join(dir, "metadata.tar.gz"))
+	f, err := os.Create(filepath.Join(dir, SourceMetadata))
 	if err != nil {
 		return "", err
 	}
@@ -72,8 +92,8 @@ func (m *Minio) SourceMetadata(ctx context.Context) (string, error) {
 	iam.Close()
 
 	err = archive.WriteHeader(&tar.Header{
-		Name: "iam.zip",
-		Mode: 0644,
+		Name: fileIAM,
+		Mode: 0o644,
 		Size: int64(buf.Len()),
 	})
 	if err != nil {
@@ -91,8 +111,8 @@ func (m *Minio) SourceMetadata(ctx context.Context) (string, error) {
 	buckets.Close()
 
 	err = archive.WriteHeader(&tar.Header{
-		Name: "buckets.zip",
-		Mode: 0644,
+		Name: fileBuckets,
+		Mode: 0o644,
 		Size: int64(buf.Len()),
 	})
 	if err != nil {
@@ -108,8 +128,8 @@ func (m *Minio) SourceMetadata(ctx context.Context) (string, error) {
 	}
 
 	err = archive.WriteHeader(&tar.Header{
-		Name: "config.txt",
-		Mode: 0644,
+		Name: fileConfig,
+		Mode: 0o644,
 		Size: int64(len(oidc)),
 	})
 	if err != nil {
@@ -120,8 +140,62 @@ func (m *Minio) SourceMetadata(ctx context.Context) (string, error) {
 	return f.Name(), nil
 }
 
-// SourceRestoreMeta restores the additional metadata for an instance, such as IAM configuration
+// RestoreMeta restores the additional metadata for an instance, such as IAM configuration, bucket metadata, and OIDC configuration, from a tar.gz archive.
+// The archive is expected to contain the following files:
+// - fileIAM: IAM configuration
+// - fileBuckets: Bucket metadata
+// - fileConfig: OIDC configuration
 func (m *Minio) RestoreMeta(ctx context.Context, meta string) error {
+	f, err := os.Open(meta)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	archive := tar.NewReader(gzr)
+
+	for {
+		header, err := archive.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		switch header.Name {
+		case fileIAM:
+			if err := m.adminClient.ImportIAM(ctx, io.NopCloser(archive)); err != nil {
+				return err
+			}
+		case fileBuckets:
+			resp, err := m.adminClient.ImportBucketMetadata(ctx, "", io.NopCloser(archive))
+			if err != nil {
+				return err
+			}
+
+			for name, value := range resp.Buckets {
+				if value.Err != "" {
+					m.log.Error("failed to import bucket", "bucket", name, "err", value.Err)
+					continue
+				}
+
+				m.log.Info("imported bucket", "bucket", name, "value", value)
+			}
+
+		case fileConfig:
+			if err := m.adminClient.SetConfig(ctx, io.NopCloser(archive)); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -130,6 +204,8 @@ type BackupBucketOptions struct {
 	Bucket         string
 }
 
+// AssertOrCreateBucket ensures that the specified bucket exists, and if not, creates it with versioning and a lifecycle policy to expire old versions.
+// The bucket will be created with the specified expiration days for old versions. If no expiration days are provided, a default of 7 days will be used.
 func (m *Minio) AssertOrCreateBucket(ctx context.Context, opt BackupBucketOptions) error {
 	log := m.log.With("bucket", opt.Bucket)
 	log.Info("checking if bucket exists")

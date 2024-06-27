@@ -13,16 +13,22 @@ releases:
     namespace: backup
   - name: s32s3
     chart: ./
-    namespace: default
+    namespace: minio
     values:
       - config:
           source:
             access_key_id:
-              value: "rclone-user"
+              valueFrom:
+                secretKeyRef:
+                  name: bitnami-minio
+                  key: root-user
             secret_access_key:
-              value: "vqBqSfipBkYsj5g0klte0fjJVtZ7DaarCpcdFXvk"
+              valueFrom:
+                secretKeyRef:
+                  name: bitnami-minio
+                  key: root-password
             endpoint:
-              value: "http://bitnami-minio.minio:9000"
+              value: "http://bitnami-minio:9000"
           destination:
             access_key_id:
               value: "rclone-user"

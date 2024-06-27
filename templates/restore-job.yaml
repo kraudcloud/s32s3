@@ -22,13 +22,14 @@ spec:
           args:
             - restore
           env:
-            {{- include "s32s3.envVar" (list "Values.config.crypt.password" "CRYPT_PASSWORD" .Values.config.crypt.password) | nindent 10 }}
-            {{- include "s32s3.envVar" (list "Values.config.crypt.password" "CRYPT_PASSWORD2" .Values.config.crypt.password2) | nindent 10 }}
-            {{- range $key, $value :=.Values.config.destination }}
-            {{- include "s32s3.envVar" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 10 }}
+            {{- range $key, $value := .Values.config.crypt -}}
+            {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 16 }}
             {{- end }}
-            {{- range $key, $value :=.Values.config.source }}
-            {{- include "s32s3.envVar" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 10 }}
+            {{- range $key, $value := .Values.config.destination -}}
+            {{- include "s32s3.env" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 16 }}
+            {{- end }}
+            {{- range $key, $value := .Values.config.source -}}
+            {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 16 }}
             {{- end }}
           - name: BACKUP_BUCKET
             value: {{ .Values.config.backupBucket | quote }}

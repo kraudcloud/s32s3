@@ -32,28 +32,28 @@ Use the [helm chart](./Chart.yaml) to provide relevant configuration options.
 
 ### Configuration
 
-| Name                                   | Description                                                    | Value       |
-| -------------------------------------- | -------------------------------------------------------------- | ----------- |
-| `config.schedule`                      | Cron schedule for backups                                      | `* * * * *` |
-| `config.backupBucket`                  | Name of the backup bucket                                      | `backups`   |
-| `config.expirationDays`                | Number of days until deleted versions are removed from backups | `7`         |
-| `config.extraEnv`                      | Extra environment variables                                    | `{}`        |
-| `config.destination.access_key_id`     | Destination access key ID                                      | `{}`        |
-| `config.destination.secret_access_key` | Destination secret access key                                  | `{}`        |
-| `config.destination.endpoint`          | Destination endpoint                                           | `{}`        |
-| `config.destination.region`            | Destination region                                             | `{}`        |
-| `config.destination.provider`          | Destination provider                                           | `{}`        |
-| `config.source.access_key_id`          | Source access key ID                                           | `{}`        |
-| `config.source.secret_access_key`      | Source secret access key                                       | `{}`        |
-| `config.source.endpoint`               | Source endpoint                                                | `{}`        |
-| `config.source.region`                 | Source region                                                  | `{}`        |
-| `config.source.provider`               | Source provider                                                | `{}`        |
-| `config.crypt.password`                | Encryption password                                            | `{}`        |
-| `config.crypt.password2`               | Secondary encryption password                                  | `{}`        |
-| `podAnnotations`                       | Annotations for pods                                           | `{}`        |
-| `podLabels`                            | Labels for pods                                                | `{}`        |
-| `podSecurityContext`                   | Security context for pods                                      | `{}`        |
-| `resources`                            | Resource requests and limits                                   | `{}`        |
-| `nodeSelector`                         | Node selector for pods                                         | `{}`        |
-| `tolerations`                          | Tolerations for pods                                           | `[]`        |
-| `affinity`                             | Affinity for pods                                              | `{}`        |
+| Name                                   | Description                                                                                                   | Value       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------- |
+| `config.schedule`                      | Cron schedule for backups                                                                                     | `* * * * *` |
+| `config.backupBucket`                  | Name of the backup bucket                                                                                     | `backups`   |
+| `config.expirationDays`                | Number of days until deleted versions are removed from backups                                                | `7`         |
+| `config.extraEnv`                      | Extra environment variables                                                                                   | `{}`        |
+| `config.destination.access_key_id`     | Destination access key ID. Using valueFrom referencing the minio secret is recommended for easy restores.     | `{}`        |
+| `config.destination.secret_access_key` | Destination secret access key. Using valueFrom referencing the minio secret is recommended for easy restores. | `{}`        |
+| `config.destination.endpoint`          | Destination endpoint                                                                                          | `{}`        |
+| `config.destination.region`            | Destination region                                                                                            | `{}`        |
+| `config.destination.provider`          | Destination provider                                                                                          | `{}`        |
+| `config.source.access_key_id`          | Source access key ID                                                                                          | `{}`        |
+| `config.source.secret_access_key`      | Source secret access key                                                                                      | `{}`        |
+| `config.source.endpoint`               | Source endpoint                                                                                               | `{}`        |
+| `config.source.region`                 | Source region                                                                                                 | `{}`        |
+| `config.source.provider`               | Source provider                                                                                               | `{}`        |
+| `config.crypt.password`                | Encryption password                                                                                           | `{}`        |
+| `config.crypt.password2`               | Secondary encryption password                                                                                 | `{}`        |
+| `podAnnotations`                       | Annotations for pods                                                                                          | `{}`        |
+| `podLabels`                            | Labels for pods                                                                                               | `{}`        |
+| `podSecurityContext`                   | Security context for pods                                                                                     | `{}`        |
+| `resources`                            | Resource requests and limits                                                                                  | `{}`        |
+| `nodeSelector`                         | Node selector for pods                                                                                        | `{}`        |
+| `tolerations`                          | Tolerations for pods                                                                                          | `[]`        |
+| `affinity`                             | Affinity for pods                                                                                             | `{}`        |

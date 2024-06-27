@@ -5,42 +5,106 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/sourcegraph/conc/iter"
+	"github.com/urfave/cli/v3"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: s32s3 <command>")
-		fmt.Println("Commands:")
-		fmt.Println("  backup - backup all buckets")
-		fmt.Println("  restore - restore all buckets")
-		os.Exit(1)
+	commands := []*cli.Command{
+		{
+			Name:  "backup",
+			Usage: "backup all buckets and instance metadata",
+			Action: func(ctx context.Context, c *cli.Command) error {
+				Backup(ctx)
+				return nil
+			},
+		},
+		{
+			Name:  "restore",
+			Usage: "restore all buckets and instance metadata",
+			Flags: []cli.Flag{
+				&cli.TimestampFlag{
+					Name:  "at",
+					Usage: "restore at specific time",
+					Config: cli.TimestampConfig{
+						Layout:   "2006-01-02T15:04:05",
+						Timezone: time.Local,
+					},
+				},
+			},
+			Action: func(ctx context.Context, c *cli.Command) error {
+				at := c.Timestamp("at")
+				if at.IsZero() {
+					Restore(ctx)
+					return nil
+				}
+
+				return fmt.Errorf("restore at is not implemented (at: %s)", at.String())
+			},
+		},
+		{
+			Name:  "rclone-config",
+			Usage: "show rclone config",
+			Action: func(ctx context.Context, c *cli.Command) error {
+				RcloneConfig(ctx)
+				return nil
+			},
+		},
+		{
+			Name:  "minio-config",
+			Usage: "dump minio instance config",
+			Action: func(ctx context.Context, c *cli.Command) error {
+				MinioConfig(ctx)
+				return nil
+			},
+		},
 	}
 
-	switch os.Args[1] {
-	case "backup":
-		Backup()
-	case "restore":
-		Restore()
-	case "rclone-config":
-		RcloneConfig()
-	case "minio-config":
-		MinioConfig()
-	default:
-		fmt.Println("Unknown command", os.Args[1])
+	app := &cli.Command{
+		Name:     "s32s3",
+		Usage:    "Backup and restore S3 buckets",
+		Commands: commands,
+	}
+
+	err := app.Run(context.Background(), os.Args)
+	if err != nil {
+		slog.Error(err.Error())
 		os.Exit(1)
 	}
 }
 
-func Restore() {
+func Restore(ctx context.Context) {
 	config, err := Config()
 	if err != nil {
 		panic(err)
 	}
 
 	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	buckets, err := RcloneListBucketsRemote(context.Background(), l.With("target", config.Crypt.Name), config, config.Crypt.Name)
+	// first restore meta
+	file, err := RcloneDownloadFile(ctx, config, DownloadFileOptions{
+		File:   SourceMetadata,
+		Source: config.Crypt.Name,
+		log:    l.With("target", config.Crypt.Name),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	m, err := NewMinio(l, config.Source.Value)
+	if err != nil {
+		panic(err)
+	}
+	err = m.RestoreMeta(ctx, file)
+	if err != nil {
+		panic(err)
+	}
+
+	buckets, err := RcloneListBucketsRemote(ctx, config, ListBucketsOptions{
+		Remote: config.Crypt.Name,
+		log:    l.With("target", config.Crypt.Name),
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +112,7 @@ func Restore() {
 	iter.ForEach(buckets, func(bucket *string) {
 		l := l.With("bucket", *bucket).With("source", config.Crypt.Name).With("dest", config.Source.Name)
 		l.Info("restoring bucket")
-		err := RcloneSyncBucket(context.Background(), config, SyncBucketOptions{
+		err := RcloneSyncBucket(ctx, config, SyncBucketOptions{
 			Bucket: *bucket,
 			Source: config.Crypt.Name,
 			Dest:   config.Source.Name,
@@ -61,7 +125,7 @@ func Restore() {
 	})
 }
 
-func RcloneConfig() {
+func RcloneConfig(ctx context.Context) {
 	config, err := Config()
 	if err != nil {
 		panic(err)
@@ -70,7 +134,7 @@ func RcloneConfig() {
 	EncodeConfig(os.Stdout, config)
 }
 
-func MinioConfig() {
+func MinioConfig(ctx context.Context) {
 	config, err := Config()
 	if err != nil {
 		panic(err)
@@ -82,7 +146,7 @@ func MinioConfig() {
 		panic(err)
 	}
 
-	path, err := src.SourceMetadata(context.Background())
+	path, err := src.SourceMetadata(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +154,7 @@ func MinioConfig() {
 	fmt.Println(path)
 }
 
-func Backup() {
+func Backup(ctx context.Context) {
 	config, err := Config()
 	if err != nil {
 		panic(err)
@@ -107,7 +171,7 @@ func Backup() {
 		panic(err)
 	}
 
-	err = dest.AssertOrCreateBucket(context.Background(), BackupBucketOptions{
+	err = dest.AssertOrCreateBucket(ctx, BackupBucketOptions{
 		Bucket:         config.BackupBucket,
 		ExpirationDays: config.ExpirationDays,
 	})
@@ -115,18 +179,18 @@ func Backup() {
 		panic(err)
 	}
 
-	metapath, err := src.SourceMetadata(context.Background())
+	metapath, err := src.SourceMetadata(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	RcloneSyncFile(context.Background(), config, SyncFileOptions{
+	RcloneSyncFile(ctx, config, SyncFileOptions{
 		File: metapath,
 		Dest: config.Crypt.Name,
 		log:  l,
 	})
 
-	buckets, err := src.ListBuckets(context.Background())
+	buckets, err := src.ListBuckets(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -134,7 +198,7 @@ func Backup() {
 	iter.ForEach(buckets, func(bucket *string) {
 		l := l.With("bucket", *bucket).With("source", config.Source.Name).With("dest", config.Crypt.Name)
 		l.Info("backing up bucket")
-		err := RcloneSyncBucket(context.Background(), config, SyncBucketOptions{
+		err := RcloneSyncBucket(ctx, config, SyncBucketOptions{
 			Bucket: *bucket,
 			Source: config.Source.Name,
 			Dest:   config.Crypt.Name,

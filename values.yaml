@@ -31,15 +31,14 @@ config:
   extraEnv: {}
   # key: value
   destination:
-    ## @param config.destination.access_key_id [object] Destination access key ID
+    ## @param config.destination.access_key_id [object] Destination access key ID. Using valueFrom referencing the minio secret is recommended for easy restores.
     access_key_id: {}
-    ## @param config.destination.secret_access_key [object] Destination secret access key
+    ## @param config.destination.secret_access_key [object] Destination secret access key. Using valueFrom referencing the minio secret is recommended for easy restores.
     secret_access_key: {}
     ## @param config.destination.endpoint [object] Destination endpoint
     endpoint: {}
     ## @param config.destination.region [object] Destination region
-    region:
-      value: "us-east-1"
+    region: {}
     ## @param config.destination.provider [object] Destination provider
     provider:
       value: "Minio"
@@ -51,8 +50,7 @@ config:
     ## @param config.source.endpoint [object] Source endpoint
     endpoint: {}
     ## @param config.source.region [object] Source region
-    region:
-      value: "us-east-1"
+    region: {}
     ## @param config.source.provider [object] Source provider
     provider:
       value: "Minio"

@@ -8,9 +8,11 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
+// EncodeConfig writes the backup configuration to the provided io.Writer in INI format.
 func EncodeConfig(w io.Writer, c BackupConfig) error {
 	fmt.Fprintf(w, "# backup_bucket = %s\n", c.BackupBucket)
 	fmt.Fprintf(w, "# expiration_days = %d\n", c.ExpirationDays)
@@ -36,6 +38,7 @@ type SyncBucketOptions struct {
 	log    *slog.Logger
 }
 
+// RcloneSyncBucket syncs the specified source bucket to the specified destination bucket using the rclone command.
 func RcloneSyncBucket(ctx context.Context, config BackupConfig, o SyncBucketOptions) error {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
@@ -76,6 +79,7 @@ type SyncFileOptions struct {
 	log  *slog.Logger
 }
 
+// RcloneSyncFile syncs a local file to the specified destination using the rclone command.
 func RcloneSyncFile(ctx context.Context, config BackupConfig, opts SyncFileOptions) error {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
@@ -109,7 +113,59 @@ func RcloneSyncFile(ctx context.Context, config BackupConfig, opts SyncFileOptio
 	return nil
 }
 
-func RcloneListBucketsRemote(ctx context.Context, log *slog.Logger, config BackupConfig, remote string) ([]string, error) {
+type DownloadFileOptions struct {
+	File   string
+	Source string
+	log    *slog.Logger
+}
+
+// RcloneDownloadFile downloads a file from the specified source location to a temporary directory.
+func RcloneDownloadFile(ctx context.Context, config BackupConfig, opts DownloadFileOptions) (string, error) {
+	f, err := os.CreateTemp("", "rclone.conf")
+	if err != nil {
+		return "", fmt.Errorf("create temp file: %w", err)
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	err = EncodeConfig(f, config)
+	if err != nil {
+		return "", fmt.Errorf("build rclone config: %w", err)
+	}
+
+	dir, err := os.MkdirTemp("", "s32s3-*")
+	if err != nil {
+		return "", err
+	}
+
+	args := []string{
+		"copy",
+		"--config", f.Name(),
+		fmt.Sprintf("%s:%s", opts.Source, opts.File),
+		dir,
+	}
+
+	opts.log.Info("running rclone", "args", args)
+	cmd := exec.CommandContext(ctx, "rclone", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("rclone copy: %w", err)
+	}
+
+	opts.log.Info("rclone copy complete")
+	return filepath.Join(dir, opts.File), nil
+}
+
+type ListBucketsOptions struct {
+	Remote string
+	log    *slog.Logger
+}
+
+// RcloneListBucketsRemote lists the buckets in the specified remote location using the provided BackupConfig and ListBucketsOptions.
+func RcloneListBucketsRemote(ctx context.Context, config BackupConfig, opt ListBucketsOptions) ([]string, error) {
 	f, err := os.CreateTemp("", "rclone.conf")
 	if err != nil {
 		return nil, fmt.Errorf("create temp file: %w", err)
@@ -125,9 +181,9 @@ func RcloneListBucketsRemote(ctx context.Context, log *slog.Logger, config Backu
 	args := []string{
 		"lsjson",
 		"--config", f.Name(),
-		fmt.Sprintf("%s:", remote),
+		fmt.Sprintf("%s:", opt.Remote),
 	}
-	log.Info("running rclone", "args", args)
+	opt.log.Info("running rclone", "args", args)
 	cmd := exec.CommandContext(ctx, "rclone", args...)
 	cmd.Stderr = os.Stderr
 	data, err := cmd.Output()
@@ -148,7 +204,7 @@ func RcloneListBucketsRemote(ctx context.Context, log *slog.Logger, config Backu
 		}
 	}
 
-	log.Info("rclone lsjson complete", "buckets", buckets)
+	opt.log.Info("rclone lsjson complete", "buckets", buckets)
 	return buckets, nil
 }
 

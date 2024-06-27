@@ -33,21 +33,21 @@ spec:
               args:
                 - backup
               env:
-                  {{- range $key, $value := .Values.config.crypt -}}
-                  {{- include "s32s3.envVar" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 16 }}
-                  {{- end }}
-                  {{- range $key, $value := .Values.config.destination }}
-                  {{- include "s32s3.envVar" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 16 }}
-                  {{- end }}
-                  {{- range $key, $value := .Values.config.source }}
-                  {{- include "s32s3.envVar" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 16 }}
-                  {{- end }}
-                - name: BACKUP_BUCKET
-                  value: {{ .Values.config.backupBucket | quote }}
-                  {{- range $key, $value := .Values.config.extraEnv}}
-                - name: EXPIRATION_DAYS
-                  value: {{ .Values.config.expirationDays | quote }}
-                - name: {{ $key | quote }}
-                  value: {{ $value | quote }}
-                  {{- end }}
+                {{- range $key, $value := .Values.config.crypt -}}
+                {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 14 }}
+                {{- end }}
+                {{- range $key, $value := .Values.config.destination -}}
+                {{- include "s32s3.env" (list (printf "Values.config.destination.%s" $key) (printf "DEST_%s" ($key | upper)) $value) | nindent 14 }}
+                {{- end }}
+                {{- range $key, $value := .Values.config.source -}}
+                {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 14 }}
+                {{- end }}
+              - name: BACKUP_BUCKET
+                value: {{ .Values.config.backupBucket | quote }}
+                {{- range $key, $value := .Values.config.extraEnv}}
+              - name: EXPIRATION_DAYS
+                value: {{ .Values.config.expirationDays | quote }}
+              - name: {{ $key | quote }}
+                value: {{ $value | quote }}
+                {{- end }}
 {{- end}}
