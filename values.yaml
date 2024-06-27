@@ -5,7 +5,7 @@
 image:
   repository: ctr.0x.pt/ops/s32s3
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "0.2.0"
 
 ## @param imagePullSecrets [array] Image pull secrets
 ## @param nameOverride [string] Override the name of the chart
