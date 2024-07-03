@@ -94,7 +94,6 @@ This process allows for a complete recovery from a destroyed Minio instance to a
 
 ## Limitations
 
-- Point in time restore is not yet implemented
 - It is *impossible* to restore a perfect view of the deleted cluster, along with previous versions of files.
   - The restore process does a point in time restore of the deleted cluster,
     but it *cannot* restore deleted versions of files
