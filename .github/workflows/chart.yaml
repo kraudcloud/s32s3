@@ -14,12 +14,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Sed Versions
+        run: |
+          sed -i -e 's/appVersion: .*/appVersion: "${{ github.ref_name }}"/' chart/Chart.yaml
+          sed -i -e 's/version: .*/version: "${{ github.ref_name }}"/' chart/Chart.yaml
+
       - name: Run chart-releaser
         uses: Karitham/helm-oci-chart-releaser@f2f293f8f796568f47dfaea603ae61e2b3b3fa41
         with:
           name: s32s3-chart
           tag: ${{ github.ref_name }}
-          path: ./
+          path: ./chart
           registry: ctr.0x.pt
           repository: ops
           # This github action sucks.

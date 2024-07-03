@@ -79,3 +79,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- else }}
 {{- end }}
 {{- end }}
+
+{{- define "s32s3.image" -}}
+{{- .Values.image.name -}}:{{- .Values.image.tag | default .Chart.AppVersion -}}
+{{- end }}

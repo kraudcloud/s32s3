@@ -12,7 +12,8 @@ releases:
     chart: bitnami/minio
     namespace: backup
   - name: s32s3
-    chart: ./
+    chart: ../chart
+    force: true
     namespace: minio
     values:
       - config:
@@ -46,5 +47,3 @@ releases:
         restore:
           enabled: true
           at: "10h"
-        image:
-          tag: latest

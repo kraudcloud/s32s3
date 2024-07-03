@@ -1,11 +1,11 @@
 ## @section Image Configuration
-## @param image.repository Repository of the image
+## @param image.name Name of the image
 ## @param image.pullPolicy Pull policy for the image
-## @param image.tag Tag of the image
+## @param image.tag [default: .Release.appVersion] Tag of the image
 image:
-  repository: ctr.0x.pt/ops/s32s3
+  name: ctr.0x.pt/ops/s32s3
   pullPolicy: IfNotPresent
-  tag: "0.3.0"
+  tag: ""
 
 ## @param imagePullSecrets [array] Image pull secrets
 ## @param nameOverride [string] Override the name of the chart

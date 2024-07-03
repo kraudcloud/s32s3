@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 
 RUN go mod download
 
-COPY src/ .
+COPY . .
 
 RUN go build -o /bin/s32s3
 

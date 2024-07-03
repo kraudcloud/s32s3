@@ -1,0 +1,9 @@
+chart/
+hack/
+.env
+.envrc
+flake.*
+*.yaml
+.git
+.github
+.direnv

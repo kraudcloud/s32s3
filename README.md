@@ -82,7 +82,7 @@ graph TD
 
 ## Configuration and Usage
 
-1. Use the [helm chart](./Chart.yaml) to deploy S32S3 in your Kubernetes cluster.
+1. Use the [helm chart](./chart/Chart.yaml) to deploy S32S3 in your Kubernetes cluster.
 2. Configure the source and destination S3 endpoints, along with encryption settings, in the `values.yaml` file.
 3. For a full restore scenario (e.g., after a Minio instance destruction):
    1. Deploy a new Minio instance
@@ -104,9 +104,9 @@ This process allows for a complete recovery from a destroyed Minio instance to a
 
 | Name               | Description                         | Value                 |
 | ------------------ | ----------------------------------- | --------------------- |
-| `image.repository` | Repository of the image             | `ctr.0x.pt/ops/s32s3` |
+| `image.name`       | Name of the image                   | `ctr.0x.pt/ops/s32s3` |
 | `image.pullPolicy` | Pull policy for the image           | `IfNotPresent`        |
-| `image.tag`        | Tag of the image                    | `0.3.0`               |
+| `image.tag`        | Tag of the image                    | `.Release.appVersion` |
 | `imagePullSecrets` | Image pull secrets                  | `[]`                  |
 | `nameOverride`     | Override the name of the chart      | `""`                  |
 | `fullnameOverride` | Override the full name of the chart | `""`                  |
