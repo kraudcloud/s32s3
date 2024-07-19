@@ -272,13 +272,15 @@ func NewMinio(logger *slog.Logger, config s3.Options) (*Minio, error) {
 	c, err := minio.New(u.Host, &minio.Options{
 		Creds:  creds,
 		Region: config.Region,
+		Secure: u.Scheme == "https",
 	})
 	if err != nil {
 		return &Minio{}, err
 	}
 
 	ac, err := madmin.NewWithOptions(u.Host, &madmin.Options{
-		Creds: creds,
+		Creds:  creds,
+		Secure: u.Scheme == "https",
 	})
 	if err != nil {
 		return &Minio{}, err
