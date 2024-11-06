@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine3.20 as builder
+FROM golang:1.23.2-alpine3.20 AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY . .
 
 RUN go build -o /bin/s32s3
 
-FROM rclone/rclone:1.63.1
+FROM rclone/rclone:1.68.1
 
 COPY --from=builder /bin/s32s3 /bin/s32s3
 

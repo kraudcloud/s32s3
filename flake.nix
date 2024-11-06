@@ -15,7 +15,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         kpkgs = knixpkgs.packages.${system};
       in {
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             kubectl
             rclone

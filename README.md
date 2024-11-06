@@ -111,6 +111,12 @@ This process allows for a complete recovery from a destroyed Minio instance to a
 | `nameOverride`     | Override the name of the chart      | `""`                  |
 | `fullnameOverride` | Override the full name of the chart | `""`                  |
 
+### Backup
+
+| Name          | Description                      | Value        |
+| ------------- | -------------------------------- | ------------ |
+| `backup.args` | Args to pass to backup container | `["backup"]` |
+
 ### Restore
 
 | Name              | Description              | Value   |
@@ -138,6 +144,7 @@ This process allows for a complete recovery from a destroyed Minio instance to a
 | `config.source.provider`               | Source provider                                                                                               | `{}`        |
 | `config.crypt.password`                | Encryption password                                                                                           | `{}`        |
 | `config.crypt.password2`               | Secondary encryption password                                                                                 | `{}`        |
+| `config.rclone`                        | Rclone config <https://github.com/rclone/rclone/blob/v1.68.1/fs/config.go#L534-L638>                          | `{}`        |
 | `podAnnotations`                       | Annotations for pods                                                                                          | `{}`        |
 | `podLabels`                            | Labels for pods                                                                                               | `{}`        |
 | `podSecurityContext`                   | Security context for pods                                                                                     | `{}`        |

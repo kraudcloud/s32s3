@@ -8,15 +8,24 @@ releases:
   - name: bitnami
     chart: bitnami/minio
     namespace: minio
+    values:
+      - auth:
+          rootPassword: "NL671NA8VyWT4eBdqKGUQ2H1xTLmRloNGZ2HlIGB"
   - name: bitnami
     chart: bitnami/minio
     namespace: backup
+    values:
+      - auth:
+          rootPassword: "NL671NA8VyWT4eBdqKGUQlH1xTLmRloNGZ2HlIGB"
   - name: s32s3
     chart: ../chart
     force: true
     namespace: minio
     values:
-      - config:
+      - image:
+          tag: latest
+          pullPolicy: Never
+        config:
           source:
             access_key_id:
               valueFrom:
@@ -44,6 +53,9 @@ releases:
               value: "password"
             password2:
               value: "salt"
-        restore:
-          enabled: true
-          at: "10h"
+          rclone:
+            max_backlog:
+              value: "1000"
+        # restore:
+        #   enabled: true
+        #   at: "10h"

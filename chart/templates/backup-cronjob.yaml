@@ -29,8 +29,7 @@ spec:
               image: "{{ include "s32s3.image" . }}"
               resources: {{ toYaml .Values.resources | nindent 16 }}
               imagePullPolicy: {{ .Values.image.pullPolicy }}
-              args:
-                - backup
+              args: {{ toYaml .Values.backup.args | nindent 16 }}
               env:
                 {{- range $key, $value := .Values.config.crypt -}}
                 {{- include "s32s3.envRequired" (list (printf "Values.config.crypt.%s" $key) (printf "CRYPT_%s" ($key | upper)) $value) | nindent 14 }}
@@ -40,6 +39,9 @@ spec:
                 {{- end }}
                 {{- range $key, $value := .Values.config.source -}}
                 {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 14 }}
+                {{- end }}
+                {{- range $key, $value := .Values.config.rclone -}}
+                {{- include "s32s3.env" (list (printf "Values.config.rclone.%s" $key) (printf "RCLONE_%s" ($key | upper)) $value) | nindent 14 }}
                 {{- end }}
               - name: BACKUP_BUCKET
                 value: {{ .Values.config.backupBucket | quote }}

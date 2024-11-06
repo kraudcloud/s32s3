@@ -35,6 +35,9 @@ spec:
             {{- range $key, $value := .Values.config.source -}}
             {{- include "s32s3.env" (list (printf "Values.config.source.%s" $key) (printf "SOURCE_%s" ($key | upper)) $value) | nindent 10 }}
             {{- end }}
+            {{- range $key, $value := .Values.config.rclone -}}
+            {{- include "s32s3.env" (list (printf "Values.config.rclone.%s" $key) (printf "RCLONE_%s" ($key | upper)) $value) | nindent 10 }}
+            {{- end }}
           - name: BACKUP_BUCKET
             value: {{ .Values.config.backupBucket | quote }}
             {{- range $key, $value := .Values.config.extraEnv}}

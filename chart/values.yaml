@@ -14,6 +14,12 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+## @section Backup
+backup:
+  ## @param backup.args Args to pass to backup container
+  args:
+    - "backup"
+
 ## @section Restore
 restore:
   ## @param restore.enabled Enable restore mode
@@ -62,6 +68,9 @@ config:
     password: {}
     ## @param config.crypt.password2 [object] Secondary encryption password
     password2: {}
+  ## @param config.rclone [object] Rclone config <https://github.com/rclone/rclone/blob/v1.68.1/fs/config.go#L534-L638>
+  rclone: {}
+  # max_backlog: {value: 10000}
 
 ## @param podAnnotations [object] Annotations for pods
 podAnnotations: {}
